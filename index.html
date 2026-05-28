@@ -269,9 +269,10 @@
     const emptyEl   = document.getElementById('empty-msg');
     const sectionEl = document.getElementById('carousel-section');
 
-    const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${EMBED_FOLDER}`;
+    const bust = Date.now();
+    const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${EMBED_FOLDER}?_=${bust}`;
     try {
-      const res = await fetch(apiUrl, { headers:{ 'Accept':'application/vnd.github.v3+json' } });
+      const res = await fetch(apiUrl, { headers:{ 'Accept':'application/vnd.github.v3+json' }, cache: 'no-store' });
       if (!res.ok) throw new Error(`GitHub API ${res.status}: ${res.statusText}`);
       const files = await res.json();
       const htmlFiles = files.filter(f => f.type==='file' && /\.html?$/i.test(f.name));
