@@ -8,107 +8,76 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root {
-      --card-bg: rgba(255,255,255,0.92);
-      --shadow: 0 8px 32px rgba(0,0,0,0.18);
-      --card-radius: 28px;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Nunito', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-      background: linear-gradient(160deg, #a8edea 0%, #fed6e3 50%, #ffecd2 100%);
-      position: relative;
-    }
-    .bg-blobs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-    .blob { position: absolute; border-radius: 50%; opacity: 0.35; animation: floatBlob 8s ease-in-out infinite alternate; }
-    .blob-1 { width:320px; height:320px; background:#fbbf24; top:-80px; left:-80px; }
-    .blob-2 { width:260px; height:260px; background:#f472b6; top:30%; right:-60px; animation-delay:1.5s; }
-    .blob-3 { width:200px; height:200px; background:#818cf8; bottom:10%; left:5%; animation-delay:3s; }
-    .blob-4 { width:180px; height:180px; background:#4ade80; bottom:-40px; right:20%; animation-delay:2s; }
-    .blob-5 { width:140px; height:140px; background:#38bdf8; top:55%; left:40%; animation-delay:4s; }
-    @keyframes floatBlob { from { transform: translate(0,0) scale(1); } to { transform: translate(20px,30px) scale(1.08); } }
-    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-    .star { position: absolute; animation: twinkle 3s ease-in-out infinite alternate; }
-    @keyframes twinkle { from { opacity:0.2; transform:scale(0.8) rotate(-10deg); } to { opacity:0.9; transform:scale(1.2) rotate(10deg); } }
-    .page { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; padding: 32px 16px 60px; min-height: 100vh; }
-    header { text-align: center; margin-bottom: 40px; animation: popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
-    @keyframes popIn { from { opacity:0; transform:scale(0.6) translateY(-30px); } to { opacity:1; transform:scale(1) translateY(0); } }
-    .header-emoji { font-size: 5rem; display: block; animation: bounce 2s ease-in-out infinite; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15)); }
-    @keyframes bounce { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-14px); } }
-    h1 { font-family:'Fredoka One',cursive; font-size:clamp(2.2rem,6vw,4rem); background:linear-gradient(135deg,#f472b6,#a78bfa,#38bdf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.1; margin-top:8px; }
-    .subtitle { font-size:1.25rem; font-weight:700; color:#6d4c8f; margin-top:8px; }
-    #loading { display:flex; flex-direction:column; align-items:center; gap:16px; margin-top:60px; }
-    .spinner { width:64px; height:64px; border:6px solid rgba(167,139,250,0.2); border-top-color:#a78bfa; border-radius:50%; animation:spin 0.8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
-    #loading p { font-family:'Fredoka One',cursive; font-size:1.4rem; color:#7c3aed; }
-    #error-msg, #empty-msg { display:none; background:var(--card-bg); border-radius:var(--card-radius); padding:32px 40px; text-align:center; box-shadow:var(--shadow); max-width:480px; margin-top:40px; }
-    #error-msg h2 { font-family:'Fredoka One',cursive; font-size:1.8rem; color:#e11d48; margin-bottom:10px; }
-    #empty-msg h2 { font-family:'Fredoka One',cursive; font-size:1.8rem; color:#7c3aed; margin-bottom:10px; }
-    #error-msg p, #empty-msg p { color:#555; font-size:1rem; line-height:1.5; }
-    #error-msg code { display:inline-block; margin-top:10px; background:#fef9c3; border-radius:8px; padding:4px 10px; font-size:0.85rem; color:#92400e; }
-    #carousel-section { display:none; width:100%; max-width:900px; flex-direction:column; align-items:center; }
-    .app-count { font-family:'Fredoka One',cursive; font-size:1.1rem; color:#7c3aed; margin-bottom:16px; background:rgba(255,255,255,0.7); padding:6px 20px; border-radius:100px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
-    .carousel-outer { width:100%; display:flex; align-items:center; gap:12px; justify-content:center; }
-    .arrow-btn { flex-shrink:0; width:60px; height:60px; border-radius:50%; border:none; cursor:pointer; font-size:1.8rem; display:flex; align-items:center; justify-content:center; transition:transform 0.15s,box-shadow 0.15s; box-shadow:0 4px 18px rgba(0,0,0,0.18); background:linear-gradient(135deg,#f472b6,#a78bfa); color:white; user-select:none; }
-    .arrow-btn:hover { transform:scale(1.12); box-shadow:0 8px 28px rgba(0,0,0,0.24); }
-    .arrow-btn:active { transform:scale(0.96); }
-    .arrow-btn:disabled { background:#d1d5db; cursor:default; transform:none; box-shadow:none; opacity:0.5; }
-    .carousel-viewport { flex:1; overflow:hidden; border-radius:var(--card-radius); }
-    .carousel-track { display:flex; transition:transform 0.45s cubic-bezier(0.34,1.12,0.64,1); will-change:transform; }
-    .app-card { flex:0 0 100%; display:flex; flex-direction:column; align-items:center; background:var(--card-bg); border-radius:var(--card-radius); overflow:hidden; box-shadow:var(--shadow); }
-    .card-header { width:100%; padding:20px 28px 16px; display:flex; align-items:center; gap:14px; }
-    .card-emoji { font-size:2.2rem; flex-shrink:0; }
-    .card-title { font-family:'Fredoka One',cursive; font-size:clamp(1.4rem,4vw,2rem); color:#1e1b4b; line-height:1.1; }
-    .card-filename { font-size:0.8rem; color:#9ca3af; margin-top:2px; font-family:monospace; }
+    :root { --card-bg:rgba(255,255,255,0.92); --shadow:0 8px 32px rgba(0,0,0,0.18); --card-radius:28px; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden;background:linear-gradient(160deg,#a8edea 0%,#fed6e3 50%,#ffecd2 100%);position:relative;}
+    .bg-blobs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+    .blob{position:absolute;border-radius:50%;opacity:0.35;animation:floatBlob 8s ease-in-out infinite alternate;}
+    .blob-1{width:320px;height:320px;background:#fbbf24;top:-80px;left:-80px;}
+    .blob-2{width:260px;height:260px;background:#f472b6;top:30%;right:-60px;animation-delay:1.5s;}
+    .blob-3{width:200px;height:200px;background:#818cf8;bottom:10%;left:5%;animation-delay:3s;}
+    .blob-4{width:180px;height:180px;background:#4ade80;bottom:-40px;right:20%;animation-delay:2s;}
+    .blob-5{width:140px;height:140px;background:#38bdf8;top:55%;left:40%;animation-delay:4s;}
+    @keyframes floatBlob{from{transform:translate(0,0) scale(1);}to{transform:translate(20px,30px) scale(1.08);}}
+    .stars{position:fixed;inset:0;pointer-events:none;z-index:0;}
+    .star{position:absolute;animation:twinkle 3s ease-in-out infinite alternate;}
+    @keyframes twinkle{from{opacity:0.2;transform:scale(0.8) rotate(-10deg);}to{opacity:0.9;transform:scale(1.2) rotate(10deg);}}
+    .page{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding:32px 16px 60px;min-height:100vh;}
+    header{text-align:center;margin-bottom:40px;animation:popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;}
+    @keyframes popIn{from{opacity:0;transform:scale(0.6) translateY(-30px);}to{opacity:1;transform:scale(1) translateY(0);}}
+    .header-emoji{font-size:5rem;display:block;animation:bounce 2s ease-in-out infinite;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.15));}
+    @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+    h1{font-family:'Fredoka One',cursive;font-size:clamp(2.2rem,6vw,4rem);background:linear-gradient(135deg,#f472b6,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-top:8px;}
+    .subtitle{font-size:1.25rem;font-weight:700;color:#6d4c8f;margin-top:8px;}
+    #loading{display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:60px;}
+    .spinner{width:64px;height:64px;border:6px solid rgba(167,139,250,0.2);border-top-color:#a78bfa;border-radius:50%;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #loading p{font-family:'Fredoka One',cursive;font-size:1.4rem;color:#7c3aed;}
+    #error-msg,#empty-msg{display:none;background:var(--card-bg);border-radius:var(--card-radius);padding:32px 40px;text-align:center;box-shadow:var(--shadow);max-width:520px;margin-top:40px;}
+    #error-msg h2{font-family:'Fredoka One',cursive;font-size:1.8rem;color:#e11d48;margin-bottom:10px;}
+    #empty-msg h2{font-family:'Fredoka One',cursive;font-size:1.8rem;color:#7c3aed;margin-bottom:10px;}
+    #error-msg p,#empty-msg p{color:#555;font-size:1rem;line-height:1.6;}
+    #error-msg code{display:block;margin-top:12px;background:#fef9c3;border-radius:8px;padding:8px 14px;font-size:0.82rem;color:#92400e;text-align:left;white-space:pre-wrap;word-break:break-all;}
+    #carousel-section{display:none;width:100%;max-width:900px;flex-direction:column;align-items:center;}
+    .app-count{font-family:'Fredoka One',cursive;font-size:1.1rem;color:#7c3aed;margin-bottom:16px;background:rgba(255,255,255,0.7);padding:6px 20px;border-radius:100px;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    .carousel-outer{width:100%;display:flex;align-items:center;gap:12px;justify-content:center;}
+    .arrow-btn{flex-shrink:0;width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;font-size:1.8rem;display:flex;align-items:center;justify-content:center;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 18px rgba(0,0,0,0.18);background:linear-gradient(135deg,#f472b6,#a78bfa);color:white;user-select:none;}
+    .arrow-btn:hover{transform:scale(1.12);box-shadow:0 8px 28px rgba(0,0,0,0.24);}
+    .arrow-btn:active{transform:scale(0.96);}
+    .arrow-btn:disabled{background:#d1d5db;cursor:default;transform:none;box-shadow:none;opacity:0.5;}
+    .carousel-viewport{flex:1;overflow:hidden;border-radius:var(--card-radius);}
+    .carousel-track{display:flex;transition:transform 0.45s cubic-bezier(0.34,1.12,0.64,1);will-change:transform;}
+    .app-card{flex:0 0 100%;display:flex;flex-direction:column;align-items:center;background:var(--card-bg);border-radius:var(--card-radius);overflow:hidden;box-shadow:var(--shadow);}
+    .card-header{width:100%;padding:20px 28px 16px;display:flex;align-items:center;gap:14px;}
+    .card-emoji{font-size:2.2rem;flex-shrink:0;}
+    .card-title{font-family:'Fredoka One',cursive;font-size:clamp(1.4rem,4vw,2rem);color:#1e1b4b;line-height:1.1;}
+    .card-filename{font-size:0.8rem;color:#9ca3af;margin-top:2px;font-family:monospace;}
+    .card-preview{width:100%;position:relative;overflow:hidden;height:320px;border-top:3px solid rgba(167,139,250,0.3);border-bottom:3px solid rgba(167,139,250,0.3);background:#f0f4ff;display:flex;align-items:center;justify-content:center;}
+    .card-preview img.preview-img{width:100%;height:100%;object-fit:cover;object-position:top;display:block;}
+    .preview-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%;height:100%;background:linear-gradient(135deg,#ede9fe,#fce7f3);}
+    .preview-placeholder .ph-emoji{font-size:4rem;animation:bounce 2s ease-in-out infinite;}
+    .preview-placeholder .ph-title{font-family:'Fredoka One',cursive;font-size:1.3rem;color:#7c3aed;}
+    .preview-placeholder .ph-hint{font-size:0.78rem;color:#9ca3af;text-align:center;max-width:220px;line-height:1.5;background:rgba(255,255,255,0.7);border-radius:12px;padding:6px 14px;}
+    .preview-overlay{position:absolute;inset:0;cursor:pointer;}
+    .card-footer{width:100%;padding:20px 28px;display:flex;align-items:center;justify-content:center;}
+    .launch-btn{font-family:'Fredoka One',cursive;font-size:1.3rem;padding:14px 40px;border:none;border-radius:100px;cursor:pointer;color:white;background:linear-gradient(135deg,#f472b6 0%,#a78bfa 60%,#38bdf8 100%);background-size:200% 200%;box-shadow:0 6px 24px rgba(167,139,250,0.45);transition:transform 0.18s,box-shadow 0.18s;animation:gradMove 4s ease infinite alternate;text-decoration:none;display:inline-flex;align-items:center;gap:10px;}
+    @keyframes gradMove{from{background-position:0% 50%;}to{background-position:100% 50%;}}
+    .launch-btn:hover{transform:scale(1.07) translateY(-2px);box-shadow:0 12px 36px rgba(167,139,250,0.55);}
+    .dots{display:flex;gap:10px;margin-top:24px;}
+    .dot{width:12px;height:12px;border-radius:50%;background:rgba(167,139,250,0.3);border:2px solid rgba(167,139,250,0.4);cursor:pointer;transition:background 0.25s,transform 0.25s;}
+    .dot.active{background:#a78bfa;transform:scale(1.35);border-color:#7c3aed;}
 
-    /* ── PREVIEW AREA ── */
-    .card-preview {
-      width:100%; position:relative; overflow:hidden; height:320px;
-      border-top:3px solid rgba(167,139,250,0.3);
-      border-bottom:3px solid rgba(167,139,250,0.3);
-      background:#f0f4ff;
-      display:flex; align-items:center; justify-content:center;
-    }
-    /* Screenshot image – fills the box */
-    .card-preview img.preview-img {
-      width:100%; height:100%; object-fit:cover; object-position:top;
-      display:block;
-    }
-    /* Placeholder shown when no screenshot exists */
-    .preview-placeholder {
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:12px; width:100%; height:100%;
-      background: linear-gradient(135deg,#ede9fe,#fce7f3);
-    }
-    .preview-placeholder .ph-emoji { font-size:4rem; animation:bounce 2s ease-in-out infinite; }
-    .preview-placeholder .ph-title { font-family:'Fredoka One',cursive; font-size:1.3rem; color:#7c3aed; }
-    .preview-placeholder .ph-hint {
-      font-size:0.78rem; color:#9ca3af; text-align:center; max-width:220px; line-height:1.5;
-      background:rgba(255,255,255,0.7); border-radius:12px; padding:6px 14px;
-    }
-    /* invisible click-through overlay to open app */
-    .preview-overlay { position:absolute; inset:0; cursor:pointer; }
-
-    .card-footer { width:100%; padding:20px 28px; display:flex; align-items:center; justify-content:center; }
-    .launch-btn { font-family:'Fredoka One',cursive; font-size:1.3rem; padding:14px 40px; border:none; border-radius:100px; cursor:pointer; color:white; background:linear-gradient(135deg,#f472b6 0%,#a78bfa 60%,#38bdf8 100%); background-size:200% 200%; box-shadow:0 6px 24px rgba(167,139,250,0.45); transition:transform 0.18s,box-shadow 0.18s; animation:gradMove 4s ease infinite alternate; text-decoration:none; display:inline-flex; align-items:center; gap:10px; }
-    @keyframes gradMove { from { background-position:0% 50%; } to { background-position:100% 50%; } }
-    .launch-btn:hover { transform:scale(1.07) translateY(-2px); box-shadow:0 12px 36px rgba(167,139,250,0.55); }
-    .dots { display:flex; gap:10px; margin-top:24px; }
-    .dot { width:12px; height:12px; border-radius:50%; background:rgba(167,139,250,0.3); border:2px solid rgba(167,139,250,0.4); cursor:pointer; transition:background 0.25s,transform 0.25s; }
-    .dot.active { background:#a78bfa; transform:scale(1.35); border-color:#7c3aed; }
-    .setup-notice { margin-top:48px; background:rgba(255,255,255,0.75); border-radius:20px; padding:20px 28px; max-width:640px; width:100%; box-shadow:0 2px 12px rgba(0,0,0,0.08); border-left:6px solid #a78bfa; }
-    .setup-notice h3 { font-family:'Fredoka One',cursive; color:#7c3aed; font-size:1.1rem; margin-bottom:6px; }
-    .setup-notice p, .setup-notice li { font-size:0.88rem; color:#4b5563; line-height:1.6; }
-    .setup-notice code { background:#ede9fe; border-radius:5px; padding:1px 6px; font-size:0.82rem; color:#6d28d9; }
-    .setup-notice ul { padding-left:20px; margin-top:6px; }
-    .setup-notice .tip { background:#fef9c3; border-left:4px solid #fbbf24; border-radius:8px; padding:8px 14px; margin-top:10px; font-size:0.84rem; color:#78350f; }
-    @media(max-width:600px) { .arrow-btn{width:48px;height:48px;font-size:1.4rem;} .card-preview{height:200px;} .card-header{padding:16px 18px 12px;} .card-footer{padding:16px 18px;} }
+    /* ── TEACHER NOTICE ── */
+    .setup-notice{margin-top:48px;background:rgba(255,255,255,0.82);border-radius:20px;padding:22px 28px;max-width:640px;width:100%;box-shadow:0 2px 12px rgba(0,0,0,0.08);border-left:6px solid #a78bfa;}
+    .setup-notice h3{font-family:'Fredoka One',cursive;color:#7c3aed;font-size:1.1rem;margin-bottom:8px;}
+    .setup-notice p,.setup-notice li{font-size:0.88rem;color:#4b5563;line-height:1.7;}
+    .setup-notice code{background:#ede9fe;border-radius:5px;padding:1px 6px;font-size:0.82rem;color:#6d28d9;}
+    .setup-notice ul{padding-left:20px;margin-top:4px;}
+    .setup-notice .tip{background:#fef9c3;border-left:4px solid #fbbf24;border-radius:8px;padding:8px 14px;margin-top:10px;font-size:0.84rem;color:#78350f;}
+    @media(max-width:600px){.arrow-btn{width:48px;height:48px;font-size:1.4rem;}.card-preview{height:200px;}.card-header{padding:16px 18px 12px;}.card-footer{padding:16px 18px;}}
   </style>
 </head>
 <body>
-
 <div class="bg-blobs">
   <div class="blob blob-1"></div><div class="blob blob-2"></div>
   <div class="blob blob-3"></div><div class="blob blob-4"></div><div class="blob blob-5"></div>
@@ -126,13 +95,13 @@
 
   <div id="error-msg">
     <h2>🙈 Oops!</h2>
-    <p>Couldn't load the apps. Check that GITHUB_USERNAME and GITHUB_REPO are set correctly in the script.</p>
+    <p>Couldn't load <code>files.json</code>. Make sure the file exists in the root of your repo with a list of your HTML filenames. Example:</p>
     <code id="error-detail"></code>
   </div>
 
   <div id="empty-msg">
     <h2>📂 No Apps Yet!</h2>
-    <p>Add <strong>.html</strong> files to your <code>embed_files/</code> folder and they'll appear here!</p>
+    <p>Add filenames to <code>files.json</code> and put the matching <code>.html</code> files in <code>embed_files/</code> — they'll appear here!</p>
   </div>
 
   <section id="carousel-section" role="region" aria-label="App carousel">
@@ -148,38 +117,40 @@
   </section>
 
   <div class="setup-notice">
-    <h3>👩‍🏫 How to add a screenshot for an app</h3>
-    <p>The preview box shows a screenshot image if you supply one. Just:</p>
+    <h3>👩‍🏫 How to add or remove apps</h3>
+    <p>Edit <code>files.json</code> in your repo root. It's just a list of filenames:</p>
+    <code style="display:block;margin:8px 0;background:#f0fdf4;border-radius:8px;padding:10px 14px;font-size:0.85rem;color:#166534;">["pizza-fractions.html", "spelling-bee.html", "your-new-app.html"]</code>
     <ul>
-      <li>Take a screenshot of your app (any screenshot tool is fine)</li>
-      <li>Name it <strong>exactly the same</strong> as the HTML file but with <code>.png</code> — e.g. <code>pizza-fractions.png</code></li>
-      <li>Upload it to the <code>screenshots/</code> folder in your repo</li>
+      <li>➕ <strong>Add an app:</strong> upload the <code>.html</code> to <code>embed_files/</code> and add its filename to <code>files.json</code></li>
+      <li>➖ <strong>Remove an app:</strong> delete it from <code>embed_files/</code> and remove its name from <code>files.json</code></li>
+      <li>🖼️ <strong>Add a preview image:</strong> upload a <code>.png</code> with the same name to <code>screenshots/</code></li>
     </ul>
-    <div class="tip">💡 No screenshot yet? No problem — a colourful placeholder shows instead, and the Launch button still works perfectly!</div>
+    <div class="tip">💡 Changes appear instantly — no waiting for GitHub's API cache!</div>
   </div>
 </div>
 
 <script>
-  // =====================================================
-  //  ⬇️  EDIT THESE TWO LINES  ⬇️
-  // =====================================================
-  const GITHUB_USERNAME = 'aitips4teacherz-stack';
-  const GITHUB_REPO     = 'ClarksApps';
-  // =====================================================
+  const BASE_URL    = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+  const EMBED       = 'embed_files/';
+  const SCREENSHOTS = 'screenshots/';
 
-  const EMBED_FOLDER  = 'embed_files';
-  const SCREENSHOTS   = 'screenshots';   // folder for preview images
-
-  const CARD_EMOJIS = ['🎮','🧩','🔢','🔬','🌍','🎨','📚','🦄','🚀','⭐','🎵','🦋','🐉','🏆','🍎','🧠'];
-  const PLACEHOLDERS = ['🎮','🧩','🌈','🚀','⭐','🎨','🧠','🦄'];
+  const CARD_EMOJIS   = ['🎮','🧩','🔢','🔬','🌍','🎨','📚','🦄','🚀','⭐','🎵','🦋','🐉','🏆','🍎','🧠'];
+  const PLACEHOLDERS  = ['🎮','🧩','🌈','🚀','⭐','🎨','🧠','🦄'];
+  const GRADIENTS     = [
+    'linear-gradient(135deg,#f472b6,#a78bfa)',
+    'linear-gradient(135deg,#38bdf8,#4ade80)',
+    'linear-gradient(135deg,#fbbf24,#fb923c)',
+    'linear-gradient(135deg,#a78bfa,#38bdf8)',
+    'linear-gradient(135deg,#4ade80,#fbbf24)',
+  ];
 
   function fileToTitle(name) {
     return name.replace(/\.html?$/i,'').replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
   }
 
-  // Sprinkle stars
+  // Stars
   const starsEl = document.getElementById('stars');
-  ['⭐','✨','🌟','💫','🌈','❤️','💜','💙'].forEach((ch,_) => {
+  ['⭐','✨','🌟','💫','🌈','❤️','💜','💙'].forEach(ch=>{
     for(let i=0;i<3;i++){
       const s=document.createElement('span');
       s.className='star'; s.textContent=ch;
@@ -188,65 +159,54 @@
     }
   });
 
-  // Carousel state
-  let current = 0, total = 0;
+  // Carousel
+  let current=0, total=0;
   const track  = document.getElementById('carousel-track');
   const dotsEl = document.getElementById('dots');
   const prevBtn= document.getElementById('prev-btn');
   const nextBtn= document.getElementById('next-btn');
   const countEl= document.getElementById('app-count');
 
-  function goTo(i) {
-    current = Math.max(0, Math.min(i, total-1));
-    track.style.transform = `translateX(-${current*100}%)`;
+  function goTo(i){
+    current=Math.max(0,Math.min(i,total-1));
+    track.style.transform=`translateX(-${current*100}%)`;
     document.querySelectorAll('.dot').forEach((d,idx)=>d.classList.toggle('active',idx===current));
-    prevBtn.disabled = current===0;
-    nextBtn.disabled = current===total-1;
-    countEl.textContent = `App ${current+1} of ${total} 🎉`;
+    prevBtn.disabled=current===0;
+    nextBtn.disabled=current===total-1;
+    countEl.textContent=`App ${current+1} of ${total} 🎉`;
   }
-  prevBtn.onclick = ()=>goTo(current-1);
-  nextBtn.onclick = ()=>goTo(current+1);
-  document.addEventListener('keydown',e=>{ if(e.key==='ArrowLeft')goTo(current-1); if(e.key==='ArrowRight')goTo(current+1); });
+  prevBtn.onclick=()=>goTo(current-1);
+  nextBtn.onclick=()=>goTo(current+1);
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')goTo(current-1);if(e.key==='ArrowRight')goTo(current+1);});
   let tx=0;
   track.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;},{passive:true});
-  track.addEventListener('touchend',e=>{ const dx=tx-e.changedTouches[0].clientX; if(Math.abs(dx)>40) dx>0?goTo(current+1):goTo(current-1); });
+  track.addEventListener('touchend',e=>{const dx=tx-e.changedTouches[0].clientX;if(Math.abs(dx)>40)dx>0?goTo(current+1):goTo(current-1);});
 
-  const gradients = [
-    'linear-gradient(135deg,#f472b6,#a78bfa)',
-    'linear-gradient(135deg,#38bdf8,#4ade80)',
-    'linear-gradient(135deg,#fbbf24,#fb923c)',
-    'linear-gradient(135deg,#a78bfa,#38bdf8)',
-    'linear-gradient(135deg,#4ade80,#fbbf24)',
-  ];
+  function buildCard(filename, index){
+    const title    = fileToTitle(filename);
+    const emoji    = CARD_EMOJIS[index%CARD_EMOJIS.length];
+    const phEmoji  = PLACEHOLDERS[index%PLACEHOLDERS.length];
+    const grad     = GRADIENTS[index%GRADIENTS.length];
+    const appUrl   = BASE_URL + EMBED + filename;
+    const shotName = filename.replace(/\.html?$/i,'.png');
+    const shotUrl  = BASE_URL + SCREENSHOTS + shotName;
 
-  function buildCard(file, index) {
-    const title   = fileToTitle(file.name);
-    const emoji   = CARD_EMOJIS[index % CARD_EMOJIS.length];
-    const phEmoji = PLACEHOLDERS[index % PLACEHOLDERS.length];
-    const grad    = gradients[index % gradients.length];
-    const appUrl  = `https://${GITHUB_USERNAME}.github.io/${GITHUB_REPO}/${EMBED_FOLDER}/${file.name}`;
-    // Screenshot: same name as HTML but .png, in /screenshots/
-    const shotName = file.name.replace(/\.html?$/i, '.png');
-    const shotUrl  = `https://${GITHUB_USERNAME}.github.io/${GITHUB_REPO}/${SCREENSHOTS}/${shotName}`;
-
-    const card = document.createElement('div');
-    card.className = 'app-card';
-    card.innerHTML = `
+    const card=document.createElement('div');
+    card.className='app-card';
+    card.innerHTML=`
       <div class="card-header" style="background:${grad}">
         <span class="card-emoji">${emoji}</span>
         <div>
           <div class="card-title">${title}</div>
-          <div class="card-filename">${file.name}</div>
+          <div class="card-filename">${filename}</div>
         </div>
       </div>
       <div class="card-preview">
-        <img class="preview-img" id="shot-${index}" alt="${title} screenshot"
-             style="display:none"
-             src="${shotUrl}" />
+        <img class="preview-img" id="shot-${index}" alt="${title} screenshot" style="display:none" src="${shotUrl}" />
         <div class="preview-placeholder" id="ph-${index}">
           <span class="ph-emoji">${phEmoji}</span>
           <span class="ph-title">${title}</span>
-          <span class="ph-hint">Add a screenshot named<br><code style="font-size:0.75rem;background:#ede9fe;padding:2px 6px;border-radius:6px;color:#6d28d9">${shotName}</code><br>to your <code style="font-size:0.75rem;background:#ede9fe;padding:2px 6px;border-radius:6px;color:#6d28d9">screenshots/</code> folder</span>
+          <span class="ph-hint">Add <code style="font-size:0.75rem;background:#ede9fe;padding:2px 5px;border-radius:5px;color:#6d28d9">${shotName}</code> to your <code style="font-size:0.75rem;background:#ede9fe;padding:2px 5px;border-radius:5px;color:#6d28d9">screenshots/</code> folder for a preview image</span>
         </div>
         <div class="preview-overlay" onclick="window.open('${appUrl}','_blank')"></div>
       </div>
@@ -254,50 +214,49 @@
         <a class="launch-btn" href="${appUrl}" target="_blank" rel="noopener">🚀 Play ${title}!</a>
       </div>`;
 
-    // Try loading screenshot — show image if it loads, keep placeholder if it 404s
-    const img = card.querySelector(`#shot-${index}`);
-    const ph  = card.querySelector(`#ph-${index}`);
-    img.onload  = () => { img.style.display='block'; ph.style.display='none'; };
-    img.onerror = () => { img.style.display='none';  ph.style.display='flex'; };
-
+    const img=card.querySelector(`#shot-${index}`);
+    const ph =card.querySelector(`#ph-${index}`);
+    img.onload =()=>{img.style.display='block';ph.style.display='none';};
+    img.onerror=()=>{img.style.display='none'; ph.style.display='flex';};
     return card;
   }
 
-  async function loadApps() {
-    const loadingEl = document.getElementById('loading');
-    const errorEl   = document.getElementById('error-msg');
-    const emptyEl   = document.getElementById('empty-msg');
-    const sectionEl = document.getElementById('carousel-section');
+  async function loadApps(){
+    const loadingEl=document.getElementById('loading');
+    const errorEl  =document.getElementById('error-msg');
+    const emptyEl  =document.getElementById('empty-msg');
+    const sectionEl=document.getElementById('carousel-section');
 
-    const bust = Date.now();
-    const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${EMBED_FOLDER}?_=${bust}`;
     try {
-      const res = await fetch(apiUrl, { headers:{ 'Accept':'application/vnd.github.v3+json' }, cache: 'no-store' });
-      if (!res.ok) throw new Error(`GitHub API ${res.status}: ${res.statusText}`);
-      const files = await res.json();
-      const htmlFiles = files.filter(f => f.type==='file' && /\.html?$/i.test(f.name));
+      // Fetch files.json with cache-busting so updates show immediately
+      const res = await fetch(`${BASE_URL}files.json?_=${Date.now()}`, { cache:'no-store' });
+      if(!res.ok) throw new Error(`Could not load files.json (HTTP ${res.status})\n\nMake sure files.json exists in your repo root.`);
 
-      loadingEl.style.display = 'none';
-      if (htmlFiles.length === 0) { emptyEl.style.display='block'; return; }
+      const filenames = await res.json();
+      const htmlFiles = filenames.filter(f => /\.html?$/i.test(f));
 
-      htmlFiles.forEach((file, i) => {
-        track.appendChild(buildCard(file, i));
-        const dot = document.createElement('button');
-        dot.className = 'dot' + (i===0?' active':'');
+      loadingEl.style.display='none';
+      if(htmlFiles.length===0){ emptyEl.style.display='block'; return; }
+
+      htmlFiles.forEach((filename,i)=>{
+        track.appendChild(buildCard(filename,i));
+        const dot=document.createElement('button');
+        dot.className='dot'+(i===0?' active':'');
         dot.setAttribute('role','tab');
-        dot.setAttribute('aria-label',`App ${i+1}: ${fileToTitle(file.name)}`);
-        dot.onclick = () => goTo(i);
+        dot.setAttribute('aria-label',`App ${i+1}: ${fileToTitle(filename)}`);
+        dot.onclick=()=>goTo(i);
         dotsEl.appendChild(dot);
       });
 
-      total = htmlFiles.length;
-      sectionEl.style.display = 'flex';
+      total=htmlFiles.length;
+      sectionEl.style.display='flex';
       goTo(0);
 
-    } catch(err) {
-      loadingEl.style.display = 'none';
-      errorEl.style.display = 'block';
-      document.getElementById('error-detail').textContent = err.message;
+    } catch(err){
+      loadingEl.style.display='none';
+      errorEl.style.display='block';
+      document.getElementById('error-detail').textContent=
+        err.message+'\n\nExample files.json:\n["pizza-fractions.html", "spelling-bee.html"]';
     }
   }
 
