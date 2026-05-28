@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Woodcraft Builder</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            keyframes: {
+              'bounce-small': {
+                '0%, 100%': { transform: 'translateY(-5%)', animationTimingFunction: 'cubic-bezier(0.8,0,1,1)' },
+                '50%': { transform: 'none', animationTimingFunction: 'cubic-bezier(0,0,0.2,1)' },
+              },
+              'pop-in': {
+                '0%': { transform: 'scale(0.8)', opacity: '0' },
+                '100%': { transform: 'scale(1)', opacity: '1' },
+              },
+              'spin-fast': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' }
+              },
+              'whack-float': {
+                '0%': { transform: 'translateY(0) scale(0.5)', opacity: '1' },
+                '100%': { transform: 'translateY(-40px) scale(1.3) rotate(-10deg)', opacity: '0' }
+              },
+              'snap-pulse': {
+                '0%, 100%': { transform: 'scale(1)' },
+                '50%': { transform: 'scale(1.15)' }
+              }
+            },
+            animation: {
+              'bounce-small': 'bounce-small 1s infinite',
+              'pop-in': 'pop-in 0.3s ease-out forwards',
+              'spin-fast': 'spin-fast 0.1s linear infinite',
+              'whack-float': 'whack-float 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+              'snap-pulse': 'snap-pulse 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) 1',
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- React and ReactDOM (CORS-friendly CDNs) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- html2pdf for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        /* Wood pegboard background pattern */
+        .pegboard-bg {
+            background-color: #eab308; /* yellow-500 base */
+            background-image: 
+                radial-gradient(#ca8a04 20%, transparent 20%),
+                linear-gradient(#fef08a, #ca8a04);
+            background-size: 24px 24px, 100% 100%;
+            background-blend-mode: multiply;
+        }
+
+        /* Diagonal safety stripes */
+        .safety-stripes {
+            background: repeating-linear-gradient(
+                45deg,
+                #fbbf24,
+                #fbbf24 15px,
+                #1e1b4b 15px,
+                #1e1b4b 30px
+            );
+        }
+
+        /* Satisfying physical screen rumble shake keyframe animation */
+        @keyframes desk-shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            15% { transform: translate(-8px, -6px) rotate(-1.5deg); }
+            30% { transform: translate(8px, 6px) rotate(1.5deg); }
+            45% { transform: translate(-6px, 4px) rotate(-1deg); }
+            60% { transform: translate(6px, -4px) rotate(1deg); }
+            75% { transform: translate(-3px, -2px) rotate(-0.5deg); }
+            90% { transform: translate(2px, 2px) rotate(0.5deg); }
+        }
+        
+        .shake-active {
+            animation: desk-shake 0.28s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Receipt paper font & style */
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Architects+Daughter&display=swap');
+        
+        .receipt-font {
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .sketch-font {
+            font-family: 'Architects Daughter', cursive;
+        }
+
+        .grid-notepad {
+            background-color: #f0fdf4;
+            background-image: 
+                linear-gradient(rgba(187, 247, 208, 0.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(187, 247, 208, 0.5) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // --- Inline SVG Icons ---
+        const X = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        );
+        const CheckCircle = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+        );
+        const RotateCcw = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+            </svg>
+        );
+        const RotateCw = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+        );
+        const HelpCircle = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+        );
+        const Home = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        );
+        const Paintbrush = (props) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M7.5 10.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5.67 1.5 1.5 1.5z"/><path d="M11.5 7.5c.83 0 1.5-.67 1.5-1.5S12.33 4.5 11.5 4.5 10 5.17 10 6s.67 1.5 1.5 1.5z"/><path d="M16.5 9.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5-1.5.67-1.5 1.5.67 1.5 1.5 1.5z"/><path d="M6 14c0-2 2-3 4-3 1.5 0 3 .5 4 1.5S17 15 17 17c0 1.1-.9 2-2 2H8c-1.1 0-2-.9-2-2z"/>
+            </svg>
+        );
+
+        // --- Helper function for touch / pointer coordinates ---
+        const getEventCoords = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        // --- Constants & Data ---
+        const CM_TO_PX = 10;
+        const MODAL_SCALE = 1.5; 
+
+        const MATERIAL_NAMES = {
+            'wood': 'Timber Block',
+            'pipe': 'Chrome Pipe',
+            'chain': 'Iron Chain',
+            'plastic': 'Plastic Board'
+        };
+
+        // Unit costs per centimeter for decimal invoice arithmetic
+        const MATERIAL_UNIT_COSTS = {
+            'wood': 1.00,
+            'pipe': 2.00,
+            'chain': 1.50,
+            'plastic': 2.50
+        };
+
+        const MATERIAL_STYLES = {
+            'wood': { fill: 'url(#wood-texture)', stroke: '#8B4513' },
+            'chain': { fill: 'url(#chain-pattern)', stroke: '#0f172a' },
+            'pipe': { fill: 'url(#pipe-grad)', stroke: '#1e293b' },
+            'plastic': { fill: 'url(#plastic-grad)', stroke: '#991b1b' }
+        };
+
+        const OUTLINE_STYLES = {
+            'wood': { fill: '#fef3c7', stroke: '#d97706', text: '#b45309' },      // Light Amber
+            'pipe': { fill: '#ecfeff', stroke: '#06b6d4', text: '#083344' },      // Light Cyan/Teal
+            'chain': { fill: '#f1f5f9', stroke: '#475569', text: '#0f172a' },     // Slate Gray
+            'plastic': { fill: '#fef2f2', stroke: '#f87171', text: '#dc2626' }    // Light Red
+        };
+
+        const RAW_MATERIALS = [
+            { type: 'wood', label: 'Timber Block', w: 10, h: 2, y: 535 },
+            { type: 'pipe', label: 'Chrome Pipe', w: 10, h: 2, y: 575 },
+            { type: 'chain', label: 'Iron Chain', w: 10, h: 2, y: 615 },
+            { type: 'plastic', label: 'Plastic Board', w: 10, h: 2, y: 655 }
+        ];
+
+        const LEVELS = [
+          {
+            title: "Playhouse",
+            difficulty: "Easy",
+            isFreeBuild: false,
+            targets: [
+              { id: 'floor', cx: 400, cy: 450, w: 24, h: 2, label: 'Floor', rot: 0, type: 'wood' },
+              { id: 'wall-left', cx: 290, cy: 360, w: 2, h: 16, label: 'Left Wall', rot: 0, type: 'wood' },
+              { id: 'wall-right', cx: 510, cy: 360, w: 2, h: 16, label: 'Right Wall', rot: 0, type: 'wood' },
+              { id: 'roof-left', cx: 340, cy: 235, w: 15, h: 2, label: 'Left Roof', rot: -36.87, type: 'wood' },
+              { id: 'roof-right', cx: 460, cy: 235, w: 15, h: 2, label: 'Right Roof', rot: 36.87, type: 'wood' },
+            ]
+          },
+          {
+            title: "Park Swing Set",
+            difficulty: "Medium",
+            isFreeBuild: false,
+            targets: [
+              { id: 'top', cx: 350, cy: 150, w: 36, h: 2, label: 'Top Bar', rot: 0, type: 'pipe' },
+              { id: 'legL', cx: 200, cy: 260, w: 2, h: 22, label: 'Left Leg', rot: 0, type: 'wood' },
+              { id: 'legR', cx: 500, cy: 260, w: 2, h: 22, label: 'Right Leg', rot: 0, type: 'wood' },
+              { id: 'chainL', cx: 300, cy: 220, w: 2, h: 14, label: 'Left Chain', rot: 0, type: 'chain' },
+              { id: 'chainR', cx: 400, cy: 220, w: 2, h: 14, label: 'Right Chain', rot: 0, type: 'chain' },
+              { id: 'seat', cx: 350, cy: 290, w: 12, h: 2, label: 'Swing Seat', rot: 0, type: 'plastic' }
+            ]
+          },
+          {
+            title: "Windmill Toy",
+            difficulty: "Hard",
+            isFreeBuild: false,
+            targets: [
+              { id: 'base', cx: 400, cy: 450, w: 28, h: 2, label: 'Base Plate', rot: 0, type: 'wood' },
+              { id: 'towerL', cx: 345, cy: 320, w: 2, h: 28, label: 'Left Column', rot: -15, type: 'wood' },
+              { id: 'towerR', cx: 455, cy: 320, w: 2, h: 28, label: 'Right Column', rot: 15, type: 'wood' },
+              { id: 'axle', cx: 400, cy: 180, w: 10, h: 2, label: 'Axle Hub', rot: 0, type: 'pipe' },
+              { id: 'blade1', cx: 400, cy: 120, w: 2, h: 10, label: 'Top Blade', rot: 0, type: 'plastic' },
+              { id: 'blade2', cx: 460, cy: 180, w: 10, h: 2, label: 'Right Blade', rot: 0, type: 'plastic' },
+              { id: 'blade3', cx: 400, cy: 240, w: 2, h: 10, label: 'Bottom Blade', rot: 0, type: 'plastic' },
+              { id: 'blade4', cx: 340, cy: 180, w: 10, h: 2, label: 'Left Blade', rot: 0, type: 'plastic' },
+              { id: 'chain', cx: 400, cy: 300, w: 2, h: 12, label: 'Pulley Chain', rot: 0, type: 'chain' }
+            ]
+          },
+          {
+            title: "Free Build Mode",
+            difficulty: "Creative",
+            isFreeBuild: true,
+            targets: []
+          }
+        ];
+
+        const DECIMAL_TARGETS = {
+            'floor': 24.3,
+            'wall-left': 16.5,
+            'wall-right': 16.5,
+            'roof-left': 15.2,
+            'roof-right': 15.2,
+            'top': 36.4,
+            'legL': 22.8,
+            'legR': 22.8,
+            'chainL': 14.1,
+            'chainR': 14.1,
+            'seat': 12.6,
+            'base': 28.3,
+            'towerL': 28.7,
+            'towerR': 28.7,
+            'axle': 10.5,
+            'blade1': 10.2,
+            'blade2': 10.2,
+            'blade3': 10.2,
+            'blade4': 10.2,
+            'chain': 12.4
+        };
+
+        // --- Main Component ---
+        function App() {
+          const [view, setView] = useState('menu'); // 'menu', 'play', or 'receipt-math'
+          const [levelIdx, setLevelIdx] = useState(0);
+          const [isDecimalMode, setIsDecimalMode] = useState(false);
+          const [activeTool, setActiveTool] = useState('measure'); // 'measure', 'move', 'hammer', 'rotate'
+          
+          const [cutParts, setCutParts] = useState([]); 
+          const [placedParts, setPlacedParts] = useState({});
+          const [nails, setNails] = useState({}); 
+          const [whacks, setWhacks] = useState([]); 
+          const [isShaking, setIsShaking] = useState(false); 
+          
+          const [measuringBlueprint, setMeasuringBlueprint] = useState(null); 
+          const [fabricatingMaterial, setFabricatingMaterial] = useState(null); 
+          
+          const [dragState, setDragState] = useState(null);
+          const [message, setMessage] = useState('');
+          const [showHelp, setShowHelp] = useState(false);
+          
+          const svgRef = useRef(null);
+          const isFreeBuild = LEVELS[levelIdx]?.isFreeBuild || false;
+
+          const resetLevel = () => {
+            setCutParts([]);
+            setPlacedParts({});
+            setNails({});
+            setMessage('');
+            setWhacks([]);
+            setIsShaking(false);
+            setActiveTool('measure');
+          };
+
+          useEffect(() => {
+            if (view === 'play' || view === 'receipt-math') {
+                resetLevel();
+            }
+          }, [levelIdx, view]);
+
+          const triggerScreenShake = () => {
+              setIsShaking(true);
+              setTimeout(() => {
+                  setIsShaking(false);
+              }, 280);
+          };
+
+          const getTargetLength = (target) => {
+              const base = Math.max(target.w, target.h);
+              return isDecimalMode ? (DECIMAL_TARGETS[target.id] || base) : base;
+          };
+
+          const getSvgPoint = (e) => {
+            const svg = svgRef.current;
+            if (!svg) return { x: 0, y: 0 };
+            const pt = svg.createSVGPoint();
+            const coords = getEventCoords(e);
+            pt.x = coords.x;
+            pt.y = coords.y;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+          };
+
+          // --- Interaction Handlers ---
+
+          const handlePointerDownBlueprint = (e, target) => {
+            e.stopPropagation();
+            if (!placedParts[target.id]) {
+                const finalLen = getTargetLength(target);
+                setMeasuringBlueprint({ id: target.id, length: finalLen, type: target.type });
+            }
+          };
+
+          const handlePointerDownRawMaterial = (e, material) => {
+            e.stopPropagation();
+            setFabricatingMaterial(material.type);
+          };
+
+          const handlePointerDownCutPart = (e, item) => {
+            e.stopPropagation();
+            e.target.setPointerCapture(e.pointerId);
+            const svgPoint = getSvgPoint(e);
+            setDragState({
+              id: item.id,
+              offsetX: svgPoint.x - item.x,
+              offsetY: svgPoint.y - item.y
+            });
+          };
+
+          const handlePointerDownPlaced = (e, targetId) => {
+            e.stopPropagation();
+            const svgPoint = getSvgPoint(e);
+
+            if (activeTool === 'rotate' && isFreeBuild) {
+                setPlacedParts(prev => {
+                    const existing = prev[targetId];
+                    if (!existing) return prev;
+                    return { ...prev, [targetId]: { ...existing, rot: ((existing.rot || 0) + 45) % 360 } };
+                });
+                triggerScreenShake();
+                return;
+            }
+
+            if (activeTool === 'move' && isFreeBuild) {
+                 const part = placedParts[targetId];
+                 
+                 // Move back to cut parts array so it can be re-dragged seamlessly
+                 setCutParts(prev => [...prev, { ...part, x: part.cx, y: part.cy, invX: part.cx, invY: part.cy }]);
+                 
+                 setPlacedParts(prev => {
+                     const newParts = { ...prev };
+                     delete newParts[targetId];
+                     return newParts;
+                 });
+                 setNails(prev => {
+                     const newNails = { ...prev };
+                     delete newNails[targetId];
+                     return newNails;
+                 });
+                 
+                 setDragState({
+                     id: part.id,
+                     offsetX: svgPoint.x - part.cx,
+                     offsetY: svgPoint.y - part.cy
+                 });
+                 e.target.setPointerCapture(e.pointerId);
+                 return;
+            }
+            
+            // Default or Hammer Tool
+            const whackWords = ["BAM!", "WHACK!", "POW!", "CLANK!", "BOOM!"];
+            const randomWord = whackWords[Math.floor(Math.random() * whackWords.length)];
+            const newWhack = { id: Date.now() + Math.random(), x: svgPoint.x, y: svgPoint.y, word: randomWord };
+            
+            setWhacks(prev => [...prev, newWhack]);
+            triggerScreenShake();
+
+            setTimeout(() => {
+                setWhacks(prev => prev.filter(w => w.id !== newWhack.id));
+            }, 800);
+
+            setNails(prev => {
+              const currentNails = prev[targetId] || [];
+              if (currentNails.length < 4) {
+                return { ...prev, [targetId]: [...currentNails, svgPoint] };
+              }
+              return prev;
+            });
+          };
+
+          const handlePointerMove = (e) => {
+            if (dragState) {
+              const svgPoint = getSvgPoint(e);
+              setCutParts(prev => prev.map(item => 
+                item.id === dragState.id 
+                  ? { ...item, x: svgPoint.x - dragState.offsetX, y: svgPoint.y - dragState.offsetY }
+                  : item
+              ));
+            }
+          };
+
+          const handlePointerUp = (e) => {
+            if (dragState) {
+              const draggedItem = cutParts.find(i => i.id === dragState.id);
+              let snapped = false;
+
+              if (isFreeBuild) {
+                  // Drop anywhere on the board
+                  const droppedItem = { ...draggedItem, cx: draggedItem.x, cy: draggedItem.y, rot: 0, isFreePlaced: true };
+                  setPlacedParts(prev => ({ ...prev, [draggedItem.id]: droppedItem }));
+                  setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
+                  triggerScreenShake();
+                  snapped = true;
+              } else {
+                  // Predefined Target Snapping logic
+                  let closestTarget = null;
+                  let minDist = 999999;
+                  for (const target of LEVELS[levelIdx].targets) {
+                    if (placedParts[target.id]) continue;
+
+                    const dist = Math.hypot(draggedItem.x - target.cx, draggedItem.y - target.cy);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closestTarget = target;
+                    }
+                  }
+
+                  if (closestTarget && minDist < 60) {
+                      const targetLength = getTargetLength(closestTarget);
+                      
+                      if (draggedItem.type !== closestTarget.type) {
+                        const neededName = MATERIAL_NAMES[closestTarget.type] || closestTarget.type;
+                        const usedName = MATERIAL_NAMES[draggedItem.type] || draggedItem.type;
+                        showMessage(`Wrong material! This spot needs ${neededName}, but you tried using ${usedName}.`);
+                        setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
+                        snapped = true;
+                      } else if (Math.abs(draggedItem.length - targetLength) < 0.05) { 
+                        setPlacedParts(prev => ({ ...prev, [closestTarget.id]: draggedItem }));
+                        setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
+                        showMessage('Perfect fit! Awesome job!');
+                        triggerScreenShake(); 
+                        snapped = true;
+                      } else {
+                        showMessage(`Oops, wrong size! Gap needs ${targetLength}cm, but your piece is ${draggedItem.length}cm.`);
+                        setCutParts(prev => prev.filter(i => i.id !== draggedItem.id));
+                        snapped = true;
+                      }
+                  }
+              }
+
+              if (!snapped) {
+                setCutParts(prev => prev.map(item => 
+                  item.id === dragState.id 
+                    ? { ...item, x: item.invX, y: item.invY }
+                    : item
+                ));
+              }
+
+              setDragState(null);
+            }
+          };
+
+          const handleFabricationComplete = (length, type) => {
+              setFabricatingMaterial(null);
+              const existingCount = cutParts.length;
+              const col = existingCount % 3;
+              const row = Math.floor(existingCount / 3);
+              
+              const newPart = {
+                  id: `cut-${Date.now()}`,
+                  type: type,
+                  length: length,
+                  w: length,
+                  h: 2,
+                  invX: 450 + (col * 110),
+                  invY: 570 + (row * 35),
+                  x: 450 + (col * 110),
+                  y: 570 + (row * 35)
+              };
+              setCutParts(prev => [...prev, newPart]);
+              showMessage(`Nice cut! You made a ${length}cm ${MATERIAL_NAMES[type]}!`);
+          };
+
+          const showMessage = (msg) => {
+            setMessage(msg);
+            setTimeout(() => setMessage(''), 4500);
+          };
+
+          const isComplete = !isFreeBuild && Object.keys(placedParts).length === LEVELS[levelIdx].targets.length;
+          
+          const unplacedTargetLengths = isFreeBuild 
+            ? [] 
+            : LEVELS[levelIdx].targets.filter(t => !placedParts[t.id] && t.type === fabricatingMaterial).map(t => getTargetLength(t));
+
+          if (view === 'menu') {
+            return (
+              <div className="flex flex-col items-center justify-center h-screen pegboard-bg font-sans selection:bg-transparent text-stone-800 p-4">
+                <div className="bg-amber-50 p-10 rounded-[32px] shadow-[0_20px_0_rgba(120,53,4,0.3)] border-8 border-amber-900 text-center max-w-4xl relative z-10">
+                    <div className="h-6 safety-stripes rounded-full mb-6 flex items-center justify-center text-[10px] text-white font-black uppercase tracking-widest px-8">
+                        Safety First! Wear Your Safety Goggles!
+                    </div>
+
+                    <h1 className="text-6xl font-black text-amber-950 mb-2 tracking-wider uppercase drop-shadow">WOODCRAFT WORKSHOP</h1>
+                    <p className="text-amber-800 font-bold mb-8 text-xl tracking-wide">Measure, Draw, Cut, and build awesome things!</p>
+                    
+                    <div className="flex justify-center items-center gap-4 bg-amber-100 border-4 border-amber-900/35 p-4 rounded-2xl max-w-md mx-auto mb-8 shadow-sm">
+                        <span className={`text-sm font-black uppercase ${!isDecimalMode ? 'text-green-700' : 'text-stone-500'}`}>Younger Kids</span>
+                        <button 
+                            onClick={() => setIsDecimalMode(!isDecimalMode)}
+                            className="w-16 h-8 bg-amber-950 rounded-full p-1 transition-colors relative flex items-center shadow-inner"
+                        >
+                            <div className={`w-6 h-6 rounded-full bg-yellow-400 absolute transition-transform shadow ${isDecimalMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
+                        </button>
+                        <span className={`text-sm font-black uppercase ${isDecimalMode ? 'text-blue-700' : 'text-stone-500'}`}>Older Kids</span>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-8">
+                        {LEVELS.map((lvl, idx) => (
+                            <button 
+                                key={idx} 
+                                onClick={() => { setLevelIdx(idx); setView('play'); }}
+                                className="bg-white hover:bg-yellow-50 p-6 rounded-3xl shadow-[0_12px_0_#d97706] hover:translate-y-2 hover:shadow-[0_4px_0_#d97706] active:translate-y-3 active:shadow-none border-4 border-amber-900 transition-all flex flex-col items-center gap-3 w-56 group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 inset-x-0 h-2 bg-amber-700 opacity-60"></div>
+                                <h2 className="text-2xl font-black text-amber-950 group-hover:text-amber-700 transition-colors">{lvl.title}</h2>
+                                <span className={`px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-widest ${
+                                    lvl.difficulty === 'Easy' ? 'bg-green-200 text-green-800' : 
+                                    lvl.difficulty === 'Medium' ? 'bg-yellow-200 text-yellow-800' : 
+                                    lvl.difficulty === 'Creative' ? 'bg-purple-200 text-purple-800' : 
+                                    'bg-red-200 text-red-800'
+                                }`}>
+                                    {lvl.difficulty}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (view === 'receipt-math') {
+            return (
+              <ReceiptActivity 
+                 level={LEVELS[levelIdx]} 
+                 placedParts={placedParts}
+                 isDecimalMode={isDecimalMode} 
+                 getTargetLength={getTargetLength}
+                 onBackToMenu={() => setView('menu')}
+              />
+            );
+          }
+
+          const renderedParts = isFreeBuild 
+             ? Object.values(placedParts) 
+             : LEVELS[levelIdx].targets.map(t => placedParts[t.id] ? { ...placedParts[t.id], cx: t.cx, cy: t.cy, rot: t.rot } : null).filter(Boolean);
+
+          return (
+            <div className="flex flex-col h-screen bg-stone-200 font-sans selection:bg-transparent touch-none text-stone-800 relative">
+              <div className="h-2 safety-stripes w-full"></div>
+
+              {/* Header */}
+              <div className="bg-amber-950 text-amber-50 p-4 shadow-lg flex items-center justify-between z-10 relative">
+                <div className="flex items-center gap-3">
+                  <svg className="w-10 h-10 fill-amber-500 animate-spin-fast" style={{animationDuration: '10s'}} viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 1 1 15.5 12A3.5 3.5 0 0 1 12 15.5M19.4 13a1.6 1.6 0 0 0 .1-1v-1a1.6 1.6 0 0 0-.1-1l2.1-1.7a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a1.6 1.6 0 0 0-1.7-1L14.3 2a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.7a1.6 1.6 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 9a1.6 1.6 0 0 0-.1 1v1a1.6 1.6 0 0 0 .1 1l-2.1 1.7a.5.5 0 0 0-.1.6l2 3.5a.5.5 0 0 0 .6.2l2.5-1a1.6 1.6 0 0 0 1.7 1l.4 2.7a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.7a1.6 1.6 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6Z"/></svg>
+                  <div>
+                    <h1 className="text-2xl font-black tracking-wider uppercase">WOODCRAFT</h1>
+                    <div className="flex items-center gap-3">
+                      <p className="text-amber-400 text-sm font-bold tracking-wide">Project: {LEVELS[levelIdx].title}</p>
+                      <span className={`text-xs text-amber-200 px-2 py-0.5 rounded font-black uppercase tracking-widest ${isFreeBuild ? 'bg-purple-800' : 'bg-amber-800'}`}>
+                        {LEVELS[levelIdx].difficulty}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-amber-900/40 p-2 rounded-2xl border border-amber-800">
+                    <span className="text-xs font-black text-amber-200 uppercase">Decimal Mode</span>
+                    <button 
+                        onClick={() => { setIsDecimalMode(!isDecimalMode); resetLevel(); }}
+                        className="w-12 h-6 bg-amber-950 rounded-full p-0.5 transition-colors relative flex items-center shadow-inner"
+                    >
+                        <div className={`w-5 h-5 rounded-full bg-yellow-400 absolute transition-transform shadow ${isDecimalMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setView('menu')} className="flex items-center gap-1.5 text-white text-sm font-black bg-amber-900 px-4 py-2.5 rounded-2xl shadow-inner border border-amber-800 hover:bg-amber-805">
+                      <Home size={16} /> Menu
+                    </button>
+                    <button onClick={resetLevel} className="flex items-center gap-1.5 text-white text-sm font-black bg-amber-900 px-4 py-2.5 rounded-2xl shadow-inner border border-amber-800 hover:bg-amber-805">
+                      <RotateCcw size={16} /> Reset
+                    </button>
+                    
+                    <button 
+                        onClick={() => {
+                            if(isFreeBuild && Object.keys(placedParts).length === 0) {
+                                showMessage("Build something first to calculate the cost!");
+                            } else {
+                                setView('receipt-math');
+                            }
+                        }} 
+                        className="flex items-center gap-1.5 text-white text-sm font-black bg-purple-600 px-4 py-2.5 rounded-2xl shadow-inner border border-purple-800 hover:bg-purple-700 transition-colors"
+                    >
+                      {isFreeBuild ? 'Finish & Bill 🧾' : 'Skip to Receipt'}
+                    </button>
+                    
+                    <button 
+                      onClick={() => setShowHelp(!showHelp)}
+                      className={`p-2.5 rounded-2xl transition-colors ${showHelp ? 'bg-amber-100 text-amber-950' : 'bg-amber-900 text-amber-200 hover:bg-amber-800'}`}
+                    >
+                      <HelpCircle size={22} />
+                    </button>
+                </div>
+              </div>
+
+              {/* Free Build Tool Bar */}
+              {isFreeBuild && (
+                <div className="absolute left-6 top-1/3 z-20 flex flex-col gap-3 bg-white p-3 rounded-2xl shadow-2xl border-4 border-stone-300">
+                    <button 
+                      onClick={() => setActiveTool('move')} 
+                      className={`p-3 rounded-xl transition-all border-b-4 flex flex-col items-center gap-1 ${activeTool === 'move' ? 'bg-blue-100 border-blue-500 scale-95' : 'bg-stone-100 border-stone-300 hover:bg-stone-200'}`}
+                    >
+                      <Home size={24} className={activeTool === 'move' ? 'text-blue-600' : 'text-stone-500'} />
+                      <span className="text-[10px] font-black uppercase text-stone-600">Move</span>
+                    </button>
+                    <button 
+                      onClick={() => setActiveTool('rotate')} 
+                      className={`p-3 rounded-xl transition-all border-b-4 flex flex-col items-center gap-1 ${activeTool === 'rotate' ? 'bg-purple-100 border-purple-500 scale-95' : 'bg-stone-100 border-stone-300 hover:bg-stone-200'}`}
+                    >
+                      <RotateCw size={24} className={activeTool === 'rotate' ? 'text-purple-600' : 'text-stone-500'} />
+                      <span className="text-[10px] font-black uppercase text-stone-600">Rotate</span>
+                    </button>
+                    <button 
+                      onClick={() => setActiveTool('hammer')} 
+                      className={`p-3 rounded-xl transition-all border-b-4 flex flex-col items-center gap-1 ${activeTool === 'hammer' ? 'bg-orange-100 border-orange-500 scale-95' : 'bg-stone-100 border-stone-300 hover:bg-stone-200'}`}
+                    >
+                      {/* Using a generic SVG path for Hammer locally */}
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={activeTool === 'hammer' ? 'text-orange-600' : 'text-stone-500'}><path d="M15 12l-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 010-3L12 9"/><path d="M17.64 15L22 10.64"/><path d="M20.91 11.7l-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16 4.61c-.4-.4-.96-.61-1.53-.61h-.86c-.84 0-1.65-.33-2.25-.93L10.11 1.8a2.12 2.12 0 00-3 0 2.12 2.12 0 000 3l1.8 1.8c.6.6.93 1.4.93 2.25v.86L12.61 12c.4.4.96.61 1.53.61h.86c.84 0 1.65.33 2.25.93l1.25 1.25a2.12 2.12 0 003 0 2.12 2.12 0 000-3z"/></svg>
+                      <span className="text-[10px] font-black uppercase text-stone-600">Nail</span>
+                    </button>
+                </div>
+              )}
+
+              {/* Help Panel */}
+              {showHelp && (
+                 <div className="absolute top-24 right-4 bg-white p-5 rounded-[24px] shadow-2xl border-4 border-amber-600 text-sm w-80 z-20 animate-pop-in">
+                    <h3 className="font-black text-amber-950 text-xl mb-3 flex justify-between items-center">
+                        How to play
+                        <button onClick={() => setShowHelp(false)} className="text-stone-400 hover:text-stone-700"><X size={18}/></button>
+                    </h3>
+                    {isFreeBuild ? (
+                        <ul className="space-y-3 text-stone-700 font-bold">
+                            <li className="flex gap-2"><span className="text-orange-500">🪚</span> Click a raw material to measure, mark, and cut.</li>
+                            <li className="flex gap-2"><span className="text-green-500">🚚</span> Drag cut pieces onto the empty board to build anything!</li>
+                            <li className="flex gap-2"><span className="text-purple-500">🔄</span> Use the Rotate tool to spin your pieces 45°.</li>
+                            <li className="flex gap-2"><span className="text-stone-600">🔨</span> Use the Hammer to lock them in place!</li>
+                        </ul>
+                    ) : (
+                        <ul className="space-y-3 text-stone-700 font-bold">
+                            <li className="flex gap-2"><span className="text-blue-500">📏</span> Click any dashed blueprint outline to see what size you need.</li>
+                            <li className="flex gap-2"><span className="text-orange-500">🪚</span> Click a raw material in the bottom-left yard to measure, mark, and cut.</li>
+                            <li className="flex gap-2"><span className="text-green-500">🚚</span> Drag cut pieces from the bottom-right yard into the blueprint.</li>
+                            <li className="flex gap-2"><span className="text-stone-600">🔨</span> Click on placed pieces to drive nails or bolts into them!</li>
+                        </ul>
+                    )}
+                 </div>
+              )}
+
+              {/* Main Game Area */}
+              <div className="flex-1 relative overflow-hidden flex items-center justify-center p-4">
+                {message && (
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-yellow-400 px-6 py-3.5 rounded-2xl shadow-xl border-4 border-amber-950 text-amber-950 font-black z-20 animate-bounce text-center max-w-lg text-lg">
+                    {message}
+                  </div>
+                )}
+
+                {/* Completion State */}
+                {isComplete && !isFreeBuild && (
+                  <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm z-30 flex items-center justify-center">
+                    <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center border-8 border-green-500 transform scale-110 transition-transform max-w-lg">
+                      <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-4" />
+                      <h2 className="text-5xl font-black text-stone-850 mb-2">PROJECT COMPLETE!</h2>
+                      <p className="text-xl font-bold text-stone-600 mb-8">Excellent craftsmanship, little builder!</p>
+                      
+                      <div className="flex flex-col gap-4 items-center">
+                          <button 
+                            onClick={() => setView('receipt-math')}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black shadow-[0_6px_0_#1d4ed8] hover:translate-y-0.5 hover:shadow-[0_4px_0_#1d4ed8] active:translate-y-1 active:shadow-none transition-all text-xl uppercase tracking-wider animate-bounce-small"
+                          >
+                            Unlock Bonus Math Receipt! 🧾✍️
+                          </button>
+
+                          <div className="flex justify-center gap-4">
+                              <button 
+                                onClick={() => setView('menu')}
+                                className="bg-stone-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-stone-600 shadow-[0_4px_0_rgba(0,0,0,0.3)] text-lg"
+                              >
+                                Workshop Desk
+                              </button>
+                              {levelIdx < LEVELS.length - 1 && (
+                                <button 
+                                  onClick={() => { setLevelIdx(prev => prev + 1); resetLevel(); }}
+                                  className="bg-green-500 text-white px-6 py-3 rounded-2xl font-black hover:bg-green-600 shadow-[0_4px_0_rgba(0,0,0,0.3)] text-lg"
+                                >
+                                  Next Project!
+                                </button>
+                              )}
+                          </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SVG Draft board */}
+                <div className={`w-full max-w-5xl aspect-[4/3] bg-sky-950 rounded-3xl shadow-inner border-[12px] border-amber-900 overflow-hidden relative transition-transform ${isShaking ? 'shake-active' : ''}`}>
+                  <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
+                      backgroundImage: 'linear-gradient(#38bdf8 1px, transparent 1px), linear-gradient(90deg, #38bdf8 1px, transparent 1px)',
+                      backgroundSize: '20px 20px'
+                  }}></div>
+
+                  <svg 
+                    ref={svgRef}
+                    viewBox="0 0 800 700" 
+                    className="w-full h-full relative z-10"
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                  >
+                    <defs>
+                      {/* Wood Pattern */}
+                      <pattern id="wood-texture" patternUnits="userSpaceOnUse" width="100" height="100">
+                        <rect width="100" height="100" fill="#f59e0b" />
+                        <path d="M0 10 Q 25 5 50 15 T 100 10 M0 30 Q 30 35 60 25 T 100 30 M0 50 Q 20 45 50 55 T 100 50 M0 70 Q 40 75 70 65 T 100 70 M0 90 Q 25 85 50 95 T 100 90" fill="none" stroke="#b45309" strokeWidth="1.5" opacity="0.6"/>
+                      </pattern>
+
+                      {/* Chains */}
+                      <pattern id="chain-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
+                        <rect width="20" height="20" fill="#475569" />
+                        <rect x="3" y="5" width="14" height="10" rx="5" fill="none" stroke="#0f172a" strokeWidth="2.5"/>
+                        <rect x="4" y="6" width="12" height="8" rx="4" fill="none" stroke="#e2e8f0" strokeWidth="1.2"/>
+                        <circle cx="10" cy="10" r="3" fill="#1e293b" stroke="#64748b" strokeWidth="1" />
+                      </pattern>
+
+                      {/* Metal Pipes */}
+                      <linearGradient id="pipe-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#bae6fd" />
+                        <stop offset="25%" stopColor="#f8fafc" />
+                        <stop offset="50%" stopColor="#0284c7" />
+                        <stop offset="75%" stopColor="#0369a1" />
+                        <stop offset="100%" stopColor="#0c4a6e" />
+                      </linearGradient>
+
+                      {/* Plastic Material */}
+                      <linearGradient id="plastic-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#fca5a5" />
+                        <stop offset="50%" stopColor="#ef4444" />
+                        <stop offset="100%" stopColor="#991b1b" />
+                      </linearGradient>
+                      
+                      <filter id="shadow">
+                        <feDropShadow dx="2" dy="4" stdDeviation="3" floodOpacity="0.3"/>
+                      </filter>
+                    </defs>
+
+                    {/* Workshop Bins */}
+                    <rect x="0" y="500" width="800" height="200" fill="#78350f" stroke="#451a03" strokeWidth="6" />
+                    <line x1="300" y1="500" x2="300" y2="700" stroke="#451a03" strokeWidth="6" />
+                    
+                    <rect x="10" y="510" width="280" height="180" fill="#b45309" rx="8" opacity="0.4" />
+                    <text x="150" y="525" textAnchor="middle" fill="#fef3c7" className="font-black text-sm uppercase tracking-widest">Raw Supplies</text>
+                    
+                    {RAW_MATERIALS.map((mat, i) => (
+                       <g 
+                          key={mat.type} 
+                          transform={`translate(25, ${mat.y})`}
+                          className="cursor-pointer hover:scale-102 transition-transform"
+                          onClick={(e) => handlePointerDownRawMaterial(e, mat)}
+                        >
+                          <rect width="240" height="28" fill="#fef08a" stroke="#ca8a04" strokeWidth="2" rx="6" filter="url(#shadow)" />
+                          <rect width={mat.w * CM_TO_PX} height={mat.h * CM_TO_PX} x="8" y="4" fill={MATERIAL_STYLES[mat.type].fill} stroke={MATERIAL_STYLES[mat.type].stroke} strokeWidth="1.5" rx="1.5" />
+                          <text x="125" y="19" fill="#451a03" fontSize="12" fontWeight="black" className="uppercase tracking-wide">{mat.label}</text>
+                       </g>
+                    ))}
+
+                    <rect x="310" y="510" width="480" height="180" fill="#1e293b" rx="8" opacity="0.4" />
+                    <text x="550" y="525" textAnchor="middle" fill="#cbd5e1" className="font-black text-sm uppercase tracking-widest">Cut Parts Tray</text>
+
+                    {/* Target Blueprints (Only shown if NOT free build) */}
+                    {!isFreeBuild && LEVELS[levelIdx].targets.map(target => {
+                      const outStyle = OUTLINE_STYLES[target.type] || OUTLINE_STYLES['wood'];
+                      return (
+                        <g 
+                          key={target.id} 
+                          transform={`translate(${target.cx}, ${target.cy}) rotate(${target.rot}) translate(${-target.w * CM_TO_PX / 2}, ${-target.h * CM_TO_PX / 2})`}
+                          className="cursor-pointer"
+                          onPointerDown={(e) => handlePointerDownBlueprint(e, target)}
+                        >
+                          {!placedParts[target.id] && (
+                            <>
+                              <rect 
+                                width={target.w * CM_TO_PX} 
+                                height={target.h * CM_TO_PX} 
+                                fill={outStyle.fill} 
+                                stroke={outStyle.stroke} 
+                                strokeWidth="3" 
+                                strokeDasharray="6 4"
+                                rx="4"
+                              />
+                              <g className="opacity-0 hover:opacity-100 transition-opacity">
+                                 <rect width={target.w * CM_TO_PX} height={target.h * CM_TO_PX} fill={outStyle.stroke} opacity="0.3" rx="4" />
+                                 <text x={(target.w * CM_TO_PX)/2} y={(target.h * CM_TO_PX)/2 + 5} textAnchor="middle" fill={outStyle.text} className="text-xs font-black uppercase tracking-wider">Measure</text>
+                              </g>
+                            </>
+                          )}
+                        </g>
+                      )
+                    })}
+
+                    {/* Placed Parts (Render dynamically for Free Build) */}
+                    {renderedParts.map(part => {
+                      const id = isFreeBuild ? part.id : part.id; // Just use actual mapping id
+                      
+                      return (
+                        <g 
+                          key={`placed-${id}`}
+                          transform={`translate(${part.cx}, ${part.cy}) rotate(${part.rot || 0}) translate(${-part.w * CM_TO_PX / 2}, ${-part.h * CM_TO_PX / 2})`}
+                          onPointerDown={(e) => handlePointerDownPlaced(e, id)}
+                          className={`group ${isFreeBuild && activeTool === 'rotate' ? 'cursor-pointer' : isFreeBuild && activeTool === 'move' ? 'cursor-grab' : 'cursor-crosshair'}`}
+                        >
+                          <rect 
+                            width={part.w * CM_TO_PX} 
+                            height={part.h * CM_TO_PX} 
+                            fill={MATERIAL_STYLES[part.type].fill} 
+                            stroke={MATERIAL_STYLES[part.type].stroke} 
+                            strokeWidth="3" 
+                            rx="4"
+                            filter="url(#shadow)"
+                          />
+                          <rect 
+                            width={part.w * CM_TO_PX} 
+                            height={part.h * CM_TO_PX} 
+                            fill={isFreeBuild && activeTool === 'rotate' ? "rgba(168, 85, 247, 0.4)" : "rgba(255,255,255,0.15)"}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity" 
+                            rx="4"
+                          />
+                        </g>
+                      )
+                    })}
+
+                    {/* Nails */}
+                    {Object.entries(nails).map(([targetId, nailPoints]) => (
+                      <g key={`nails-${targetId}`}>
+                        {nailPoints.map((point, i) => (
+                          <g key={i} transform={`translate(${point.x}, ${point.y})`}>
+                            {/* Bolt / Nail metal style */}
+                            <circle r="6" fill="#64748b" stroke="#334155" strokeWidth="1.5" />
+                            <circle r="3" fill="#e2e8f0" cx="-1" cy="-1" />
+                            <line x1="-3" y1="-3" x2="3" y2="3" stroke="#334155" strokeWidth="1.5" />
+                          </g>
+                        ))}
+                      </g>
+                    ))}
+
+                    {/* Dragged/Cut items */}
+                    {cutParts.map((item) => {
+                      const isDragging = dragState?.id === item.id;
+                      
+                      return (
+                        <g 
+                          key={item.id}
+                          transform={`translate(${item.x}, ${item.y}) translate(${-item.w * CM_TO_PX / 2}, ${-item.h * CM_TO_PX / 2})`}
+                          onPointerDown={(e) => handlePointerDownCutPart(e, item)}
+                          className={`
+                            ${isDragging ? 'cursor-grabbing opacity-90' : 'cursor-grab'} 
+                            ${!isDragging && 'transition-transform duration-200'}
+                          `}
+                          filter={isDragging ? 'url(#shadow)' : ''}
+                        >
+                          {isDragging && <rect width={item.w * CM_TO_PX} height={item.h * CM_TO_PX} fill="black" opacity="0.15" transform="translate(4, 8)" rx="4"/>}
+                          
+                          <rect 
+                            width={item.w * CM_TO_PX} 
+                            height={item.h * CM_TO_PX} 
+                            fill={MATERIAL_STYLES[item.type].fill} 
+                            stroke={MATERIAL_STYLES[item.type].stroke} 
+                            strokeWidth="3" 
+                            rx="4"
+                          />
+                          <text x={(item.w * CM_TO_PX)/2} y={(item.h * CM_TO_PX) + 16} textAnchor="middle" fill="#cbd5e1" fontSize="11" fontWeight="black">{item.length}cm</text>
+                          
+                          {/* Super satisfying reticle crosshair in the absolute middle of the material block during dragging */}
+                          {isDragging && (
+                            <g transform={`translate(${(item.w * CM_TO_PX) / 2}, ${(item.h * CM_TO_PX) / 2})`}>
+                                <circle r="12" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeDasharray="3 2" />
+                                <circle r="3.5" fill="#2563eb" />
+                                <line x1="-18" y1="0" x2="18" y2="0" stroke="#2563eb" strokeWidth="2.5" />
+                                <line x1="0" y1="-18" x2="0" y2="18" stroke="#2563eb" strokeWidth="2.5" />
+                            </g>
+                          )}
+                        </g>
+                      )
+                    })}
+
+                    {/* Hit text floaties */}
+                    {whacks.map(whack => (
+                        <g key={whack.id} transform={`translate(${whack.x}, ${whack.y})`}>
+                            <g className="animate-whack-float">
+                                <polygon points="-30,-10 -15,-15 0,-30 15,-15 30,-10 15,5 20,20 0,10 -20,20 -15,5" fill="#facc15" stroke="#78350f" strokeWidth="3" />
+                                <text textAnchor="middle" y="3" fill="#78350f" fontSize="14" fontWeight="black">{whack.word}</text>
+                            </g>
+                        </g>
+                    ))}
+                  </svg>
+                </div>
+              </div>
+
+              {/* Blueprint Measurement Modal */}
+              {measuringBlueprint && (
+                <BlueprintMeasureModal 
+                  item={measuringBlueprint} 
+                  onClose={() => setMeasuringBlueprint(null)} 
+                  isDecimalMode={isDecimalMode}
+                />
+              )}
+
+              {/* Fabrication Station Modal */}
+              {fabricatingMaterial && (
+                <FabricationStation 
+                  type={fabricatingMaterial}
+                  onClose={() => setFabricatingMaterial(null)}
+                  onComplete={handleFabricationComplete}
+                  isDecimalMode={isDecimalMode}
+                  targetLengths={unplacedTargetLengths}
+                />
+              )}
+
+            </div>
+          );
+        }
+
+        // --- Subcomponents ---
+
+        // Simplified modal for measuring blueprints only
+        function BlueprintMeasureModal({ item, onClose, isDecimalMode }) {
+          const tapeRef = useRef(null);
+          const [dragX, setDragX] = useState(40);
+          const [isDragging, setIsDragging] = useState(false);
+          const [isSnapped, setIsSnapped] = useState(false);
+          
+          const scale = isDecimalMode ? 2.5 : 1.5;
+          const displayPX = item.length * CM_TO_PX * scale;
+          const currentMeasurement = isDecimalMode
+            ? Math.max(0, Math.round((dragX / (CM_TO_PX * scale)) * 10) / 10)
+            : Math.max(0, Math.round(dragX / (CM_TO_PX * scale)));
+          const outStyle = OUTLINE_STYLES[item.type] || OUTLINE_STYLES['wood'];
+
+          useEffect(() => {
+            if (!isDragging) return;
+
+            const handlePointerMove = (e) => {
+              if (!tapeRef.current) return;
+              const rect = tapeRef.current.getBoundingClientRect();
+              const coords = getEventCoords(e);
+              const rawX = coords.x - rect.left;
+              
+              const targetPX = displayPX;
+              const snapThreshold = 10;
+
+              if (Math.abs(rawX - targetPX) < snapThreshold) {
+                setDragX(targetPX);
+                if (!isSnapped) {
+                  setIsSnapped(true);
+                  if (navigator.vibrate) navigator.vibrate(20); 
+                }
+              } else {
+                setDragX(Math.max(0, Math.min(rawX, displayPX + 120))); 
+                setIsSnapped(false);
+              }
+            };
+
+            const handlePointerUp = () => {
+              setIsDragging(false);
+            };
+
+            window.addEventListener('pointermove', handlePointerMove);
+            window.addEventListener('pointerup', handlePointerUp);
+            return () => {
+              window.removeEventListener('pointermove', handlePointerMove);
+              window.removeEventListener('pointerup', handlePointerUp);
+            };
+          }, [isDragging, displayPX, scale, isSnapped]);
+
+          const ticks = [];
+          const step = isDecimalMode ? 0.1 : 1;
+          const maxVal = dragX / (CM_TO_PX * scale);
+          
+          for (let i = 0; i <= maxVal; i += step) {
+            const xPos = i * (CM_TO_PX * scale);
+            if (xPos > dragX) break;
+            
+            const isCm = Math.abs(i - Math.round(i)) < 0.01;
+            const isHalfCm = Math.abs((i * 2) - Math.round(i * 2)) < 0.01;
+            
+            let lineLength = 5;
+            if (isCm) lineLength = 15;
+            else if (isHalfCm) lineLength = 9;
+
+            ticks.push(
+              <g key={Math.round(i * 10)} transform={`translate(${xPos}, 0)`}>
+                <line x1="0" y1="0" x2="0" y2={lineLength} stroke="black" strokeWidth={isCm ? "2.5" : "1"} />
+                {isCm && Math.round(i) > 0 && (
+                  <text x="0" y="28" textAnchor="middle" fontSize={isDecimalMode ? "11" : "14"} fontWeight="black" fill="black">{Math.round(i)}</text>
+                )}
+              </g>
+            );
+          }
+
+          return (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 touch-none">
+              <div className="bg-white rounded-[32px] shadow-2xl p-8 max-w-4xl w-full relative overflow-hidden border-8 border-blue-900 text-stone-800 animate-pop-in">
+                
+                <button onClick={onClose} className="absolute top-4 right-4 bg-stone-100 p-2 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors z-50"><X size={24} /></button>
+                <h2 className="text-4xl font-black text-blue-950 mb-1 text-center uppercase tracking-wide">Measuring Blueprint Gap</h2>
+                <p className="text-center text-stone-500 font-bold mb-4">Drag the tape measure body from the zero line to the right edge to find the required length.</p>
+                
+                <div className="flex justify-center mb-8">
+                  <span className={`px-5 py-2.5 rounded-2xl text-sm font-black uppercase tracking-widest shadow-sm ${
+                    item.type === 'wood' ? 'bg-amber-100 text-amber-800 border-2 border-amber-300' :
+                    item.type === 'pipe' ? 'bg-cyan-100 text-cyan-850 border-2 border-cyan-300' :
+                    item.type === 'chain' ? 'bg-slate-200 text-slate-850 border-2 border-slate-400' :
+                    'bg-red-100 text-red-800 border-2 border-red-300'
+                  }`}>
+                    Material Needed: {MATERIAL_NAMES[item.type]}
+                  </span>
+                </div>
+
+                <div className="flex justify-center mb-12 h-16 relative">
+                  <div className={`px-8 py-3 rounded-2xl font-black text-4xl shadow-md border-4 transition-all duration-150 ${
+                     isSnapped 
+                     ? 'bg-green-500 text-white border-green-600 scale-105 animate-snap-pulse' 
+                     : 'bg-blue-100 text-blue-900 border-blue-300'
+                  }`}>
+                    {currentMeasurement} cm
+                  </div>
+                  {isSnapped && (
+                     <div className="absolute right-12 top-1/2 -translate-y-1/2 bg-yellow-400 text-amber-950 font-black text-sm uppercase px-3 py-1.5 rounded-xl rotate-12 border-2 border-amber-900 shadow-md animate-pop-in">
+                        CLICK! 🧲
+                     </div>
+                  )}
+                </div>
+
+                <div className="relative h-64 flex items-center justify-start ml-16" ref={tapeRef}>
+                  <div className="absolute h-[60px] rounded-[12px] top-1/2 -translate-y-1/2 border-4 border-dashed" 
+                       style={{ width: `${displayPX}px`, left: 0, backgroundColor: outStyle.fill, borderColor: outStyle.stroke }}>
+                     <div className="w-full h-full flex items-center justify-center font-black uppercase tracking-widest opacity-80" style={{ color: outStyle.text }}>Blueprint Gap</div>
+                     <div className="absolute left-[-2px] top-[-30px] bottom-[-30px] w-1 bg-red-500 z-10 flex items-start justify-center">
+                        <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded -translate-y-full mt-[-4px]">0 cm</span>
+                     </div>
+                  </div>
+
+                  <div className="absolute top-1/2 -translate-y-1/2 w-[20px] h-[60px] bg-stone-300 border-2 border-stone-500 rounded-l-lg shadow-md flex items-center justify-center z-30" style={{ left: '-20px' }}>
+                    <div className="w-1 h-10 bg-stone-400 rounded-full"></div>
+                  </div>
+
+                  {dragX > 0 && (
+                    <div className="absolute h-[40px] top-1/2 -translate-y-1/2 overflow-hidden bg-yellow-400 border-y-2 border-yellow-600 z-20 origin-left" style={{ width: `${dragX}px`, left: '0px' }}>
+                      <svg width="100%" height="100%">{ticks}<line x1="0" y1="20" x2="100%" y2="20" stroke="rgba(0,0,0,0.1)" strokeWidth="1" /></svg>
+                    </div>
+                  )}
+
+                  <div className={`absolute top-1/2 -translate-y-1/2 w-[110px] h-[100px] bg-yellow-500 rounded-2xl shadow-xl border-4 flex items-center justify-center z-40 cursor-ew-resize hover:bg-yellow-400 touch-none transition-all ${isSnapped ? 'border-green-500 scale-102 ring-4 ring-green-300/30' : 'border-yellow-600'}`}
+                    style={{ left: `${dragX}px` }} onPointerDown={(e) => { e.preventDefault(); setIsDragging(true); }}>
+                    <div className="absolute left-[-4px] top-1/2 -translate-y-1/2 w-3 h-[42px] bg-black rounded-l-sm border-y border-l border-stone-700"></div>
+                    <div className="w-[70px] h-[70px] bg-stone-800 rounded-full shadow-inner"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Complex modal for Measure -> Mark -> Cut fabrication pipeline
+        function FabricationStation({ type, onClose, onComplete, isDecimalMode, targetLengths }) {
+            const [step, setStep] = useState(0); // 0: measure, 1: mark, 2: cut
+            
+            // Measure State
+            const [tapeX, setTapeX] = useState(100);
+            const [isDraggingTape, setIsDraggingTape] = useState(false);
+            const [isSnapped, setIsSnapped] = useState(false);
+            const measureRef = useRef(null);
+
+            // Mark State
+            const [drawnX, setDrawnX] = useState(100);
+            const [markLine, setMarkLine] = useState([]); // Array of absolute Y-coordinates
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [cursor, setCursor] = useState({ x: 0, y: 0 });
+            const [isHoveringWorkspace, setIsHoveringWorkspace] = useState(false);
+            const [fabMessage, setFabMessage] = useState('');
+            
+            // Cut State (Vertical Feed)
+            const [materialY, setMaterialY] = useState(170); // Starts at bottom
+            const [isDraggingMaterial, setIsDraggingMaterial] = useState(false);
+            const [hasCut, setHasCut] = useState(false);
+            const [sparks, setSparks] = useState([]); // Flying particles
+            
+            const scale = isDecimalMode ? 2.5 : 1.5;
+            const currentMeasurement = isDecimalMode
+                ? Math.max(0, Math.round((tapeX / (CM_TO_PX * scale)) * 10) / 10)
+                : Math.max(0, Math.round(tapeX / (CM_TO_PX * scale)));
+            const SAW_Y = 120; // Y coordinate of saw blade
+            const SAW_X = 400; // X coordinate of saw blade
+            const lastClientY = useRef(0);
+            const workspaceSvgRef = useRef(null);
+
+            // -- Coordinate Translation for Workstation Svg --
+            const getWorkspacePoint = (e) => {
+                const svg = workspaceSvgRef.current;
+                if (!svg) return { x: 0, y: 0 };
+                const pt = svg.createSVGPoint();
+                const coords = getEventCoords(e);
+                pt.x = coords.x;
+                pt.y = coords.y;
+                return pt.matrixTransform(svg.getScreenCTM().inverse());
+            };
+
+            // -- Live Pencil Pointer Move Handlers --
+            const handleWorkspacePointerMove = (e) => {
+                const pt = getWorkspacePoint(e);
+                setCursor({ x: pt.x, y: pt.y });
+                setIsHoveringWorkspace(true);
+                
+                if (isDrawing && step === 1) {
+                    setMarkLine(prev => [...prev, pt.y]);
+                }
+            };
+
+            // -- Step 0 Dragging Effect with smart magnet snapping to needed sizes --
+            useEffect(() => {
+                if (!isDraggingTape || step !== 0) return;
+
+                const handleTapeMove = (e) => {
+                    if (!measureRef.current) return;
+                    const rect = measureRef.current.getBoundingClientRect();
+                    const coords = getEventCoords(e);
+                    const rawX = coords.x - rect.left - 50; 
+                    
+                    const snapThreshold = 10; 
+                    let snappedValue = null;
+
+                    for (let targetLen of targetLengths) {
+                        const targetPX = targetLen * CM_TO_PX * scale;
+                        if (Math.abs(rawX - targetPX) < snapThreshold) {
+                            snappedValue = targetPX;
+                            break;
+                        }
+                    }
+
+                    if (snappedValue !== null) {
+                        setTapeX(snappedValue);
+                        if (!isSnapped) {
+                            setIsSnapped(true);
+                            if (navigator.vibrate) navigator.vibrate(20);
+                        }
+                    } else {
+                        setTapeX(Math.max(20, Math.min(rawX, 50 * CM_TO_PX * scale)));
+                        setIsSnapped(false);
+                    }
+                };
+
+                const handleTapeUp = () => {
+                    setIsDraggingTape(false);
+                };
+
+                window.addEventListener('pointermove', handleTapeMove);
+                window.addEventListener('pointerup', handleTapeUp);
+                return () => {
+                    window.removeEventListener('pointermove', handleTapeMove);
+                    window.removeEventListener('pointerup', handleTapeUp);
+                };
+            }, [isDraggingTape, step, scale, targetLengths, isSnapped]);
+
+            // -- Step 1 Draw Handlers --
+            const handleMarkDown = (e) => {
+                if (step !== 1) return;
+                e.preventDefault();
+                setIsDrawing(true);
+                const pt = getWorkspacePoint(e);
+                setMarkLine([pt.y]);
+                setDrawnX(pt.x - 50);
+            };
+
+            const handleMarkUp = () => {
+                if (!isDrawing || step !== 1) return;
+                setIsDrawing(false);
+                
+                if (markLine.length > 5) {
+                    const minY = Math.min(...markLine);
+                    const maxY = Math.max(...markLine);
+                    const span = maxY - minY;
+                    
+                    if (span > 35) {
+                        const diff = Math.abs(drawnX - tapeX);
+                        if (diff <= 25) {
+                            setStep(2); 
+                        } else {
+                            setMarkLine([]); 
+                            setFabMessage("Draw your mark right at the end of the tape measure!");
+                            setTimeout(() => setFabMessage(''), 4500);
+                        }
+                    } else {
+                        setMarkLine([]); 
+                    }
+                }
+            };
+
+            // -- Step 2 Cut Logic (Vertical Feed) --
+            const triggerCut = () => {
+                setHasCut(true);
+                setIsDraggingMaterial(false);
+                setMaterialY(SAW_Y - 60); 
+                setSparks([]);
+                setTimeout(() => {
+                    onComplete(currentMeasurement, type);
+                }, 1500);
+            };
+
+            const handleMaterialDown = (e) => {
+                if (step !== 2 || hasCut) return;
+                const coords = getEventCoords(e);
+                lastClientY.current = coords.y;
+                setIsDraggingMaterial(true);
+            };
+
+            useEffect(() => {
+                if (!isDraggingMaterial || step !== 2 || hasCut) return;
+
+                const handleMaterialMove = (e) => {
+                    const coords = getEventCoords(e);
+                    if (lastClientY.current === 0) {
+                        lastClientY.current = coords.y;
+                        return;
+                    }
+                    const dy = coords.y - lastClientY.current;
+                    lastClientY.current = coords.y;
+
+                    setMaterialY(prev => {
+                        const next = Math.max(50, Math.min(170, prev + dy));
+
+                        if (next <= 140 && next >= 70) {
+                            const matColor = type === 'wood' ? '#d97706' : type === 'plastic' ? '#f87171' : type === 'pipe' ? '#22d3ee' : '#f97316';
+                            const newSparks = Array.from({ length: 4 }).map(() => ({
+                                id: Math.random(),
+                                x: SAW_X + (Math.random() - 0.5) * 15,
+                                y: SAW_Y + (Math.random() - 0.5) * 10,
+                                vx: (Math.random() - 0.3) * 6,
+                                vy: -(Math.random() * 5 + 3),
+                                size: Math.random() * 4 + 2,
+                                color: matColor
+                            }));
+                            setSparks(prevSparks => [...prevSparks.slice(-20), ...newSparks]);
+                        } else {
+                            setSparks([]);
+                        }
+
+                        if (next + 60 <= SAW_Y) {
+                            setTimeout(() => triggerCut(), 0);
+                        }
+                        return next;
+                    });
+                };
+
+                const handleMaterialUp = () => {
+                    setIsDraggingMaterial(false);
+                    setSparks([]);
+                };
+
+                window.addEventListener('pointermove', handleMaterialMove);
+                window.addEventListener('pointerup', handleMaterialUp);
+                return () => {
+                    window.removeEventListener('pointermove', handleMaterialMove);
+                    window.removeEventListener('pointerup', handleMaterialUp);
+                };
+            }, [isDraggingMaterial, step, hasCut, drawnX, type]);
+
+            useEffect(() => {
+                if (sparks.length === 0) return;
+                const timer = setInterval(() => {
+                    setSparks(prev => prev.map(s => ({
+                        ...s,
+                        x: s.x + s.vx,
+                        y: s.y + s.vy,
+                        vy: s.vy + 0.3 
+                    })).filter(s => s.y < 256));
+                }, 30);
+                return () => clearInterval(timer);
+            }, [sparks]);
+
+            const ticks = [];
+            const stepMode = isDecimalMode ? 0.1 : 1;
+            const maxVal = tapeX / (CM_TO_PX * scale);
+            
+            for (let i = 0; i <= maxVal; i += stepMode) {
+              const xPos = i * (CM_TO_PX * scale);
+              if (xPos > tapeX) break;
+              
+              const isCm = Math.abs(i - Math.round(i)) < 0.01;
+              const isHalfCm = Math.abs((i * 2) - Math.round(i * 2)) < 0.01;
+              
+              let lineLength = 5;
+              if (isCm) lineLength = 15;
+              else if (isHalfCm) lineLength = 9;
+
+              ticks.push(
+                <g key={Math.round(i * 10)} transform={`translate(${xPos}, 0)`}>
+                  <line x1="0" y1="0" x2="0" y2={lineLength} stroke="black" strokeWidth={isCm ? "2.5" : "1"} />
+                  {isCm && Math.round(i) > 0 && (
+                    <text x="0" y="28" textAnchor="middle" fontSize={isDecimalMode ? "11" : "14"} fontWeight="black" fill="black">{Math.round(i)}</text>
+                  )}
+                </g>
+              );
+            }
+
+            const matStyle = MATERIAL_STYLES[type];
+            const matLabel = RAW_MATERIALS.find(m => m.type === type).label;
+
+            return (
+               <div className="fixed inset-0 bg-stone-900/95 backdrop-blur-sm z-50 flex items-center justify-center p-4 touch-none select-none text-stone-100">
+                  <div className="w-full max-w-5xl h-[520px] relative bg-stone-950 p-6 rounded-[36px] border-8 border-amber-900 shadow-2xl">
+                     
+                     <button onClick={onClose} className="absolute top-4 right-4 bg-stone-700 text-white p-3 rounded-full hover:bg-red-500 transition-colors z-50">
+                       <X size={24} />
+                     </button>
+
+                     <div className="text-center mb-8 animate-pop-in">
+                        <h2 className="text-4xl font-black text-white mb-1 uppercase tracking-widest drop-shadow">FABRICATION STATION: {matLabel}</h2>
+                        {step === 0 && <p className="text-xl text-yellow-400 font-bold">Step 1: Pull tape measure to the required length.</p>}
+                        {step === 1 && (
+                            <p className="text-xl text-amber-400 font-bold animate-pulse">
+                                {fabMessage ? fabMessage : "Step 2: Drag the pencil down to draw a clear cut line!"}
+                            </p>
+                        )}
+                        {step === 2 && !hasCut && <p className="text-xl text-red-500 font-bold animate-pulse">Step 3: Drag your material UP through the saw!</p>}
+                        {step === 2 && hasCut && <p className="text-xl text-green-400 font-bold animate-bounce">Cut successful!</p>}
+                     </div>
+
+                     <div className="w-full h-64 relative bg-stone-800 rounded-3xl overflow-hidden border-8 border-stone-700 shadow-inner"
+                          ref={measureRef}
+                     >
+                         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{backgroundImage: 'radial-gradient(#fff 2px, transparent 2px)', backgroundSize: '30px 30px'}}></div>
+
+                         <svg 
+                              ref={workspaceSvgRef}
+                              className="w-full h-full overflow-visible" 
+                              style={{ cursor: step === 1 ? 'none' : 'default' }}
+                              onPointerMove={handleWorkspacePointerMove}
+                              onPointerLeave={() => setIsHoveringWorkspace(false)}
+                              onPointerEnter={() => setIsHoveringWorkspace(true)}
+                         >
+                            <defs>
+                              <pattern id="wood-texture" patternUnits="userSpaceOnUse" width="100" height="100"><rect width="100" height="100" fill="#DEB887" /><path d="M0 10 Q 25 5 50 15 T 100 10 M0 30 Q 30 35 60 25 T 100 30 M0 50 Q 20 45 50 55 T 100 50 M0 70 Q 40 75 70 65 T 100 70 M0 90 Q 25 85 50 95 T 100 90" fill="none" stroke="#CD853F" strokeWidth="1" opacity="0.5"/></pattern>
+                              <pattern id="chain-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
+                                <rect width="20" height="20" fill="#334155" />
+                                <rect x="3" y="5" width="14" height="10" rx="5" fill="none" stroke="#0f172a" strokeWidth="2.5"/>
+                                <rect x="4" y="6" width="12" height="8" rx="4" fill="none" stroke="#cbd5e1" strokeWidth="1"/>
+                                <circle cx="10" cy="10" r="3" fill="#1e293b" stroke="#94a3b8" strokeWidth="1" />
+                              </pattern>
+                              <linearGradient id="pipe-grad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#bae6fd" />
+                                <stop offset="25%" stopColor="#f8fafc" />
+                                <stop offset="50%" stopColor="#0284c7" />
+                                <stop offset="75%" stopColor="#0369a1" />
+                                <stop offset="100%" stopColor="#0c4a6e" />
+                              </linearGradient>
+                              <linearGradient id="plastic-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fca5a5" /><stop offset="50%" stopColor="#ef4444" /><stop offset="100%" stopColor="#b91c1c" /></linearGradient>
+                            </defs>
+
+                            {step === 2 && (
+                                <g>
+                                    <rect x="0" y="100" width="1000" height="156" fill="#292524" />
+                                    <rect x="250" y="0" width="300" height="256" fill="#44403c" />
+                                    <line x1={SAW_X} y1="0" x2={SAW_X} y2="256" stroke="#0c0a09" strokeWidth="6" />
+                                    <line x1={SAW_X - 60} y1="0" x2={SAW_X - 60} y2="256" stroke="#eab308" strokeWidth="3" strokeDasharray="5 5" />
+                                    <line x1={SAW_X + 60} y1="0" x2={SAW_X + 60} y2="256" stroke="#eab308" strokeWidth="3" strokeDasharray="5 5" />
+                                </g>
+                            )}
+
+                            <g transform={`translate(${step === 2 ? (SAW_X - drawnX) : 50}, ${step === 2 ? materialY : 98})`}>
+                                <rect 
+                                    x="0" y="0" width={drawnX} height="60" 
+                                    fill={matStyle.fill} stroke={matStyle.stroke} strokeWidth="3" 
+                                    className={step === 2 && !hasCut ? "cursor-ns-resize animate-pulse" : ""}
+                                    onPointerDown={handleMaterialDown}
+                                />
+                                <rect 
+                                    x={drawnX} y="0" width={1000 - drawnX} height="60" 
+                                    fill={matStyle.fill} stroke={matStyle.stroke} strokeWidth="3" 
+                                    className={step === 2 && !hasCut ? "cursor-ns-resize" : ""}
+                                    onPointerDown={handleMaterialDown}
+                                    style={hasCut ? {
+                                        transformOrigin: `${drawnX}px 30px`,
+                                        transform: 'translate(50px, 160px) rotate(55deg)',
+                                        opacity: 0,
+                                        transition: 'transform 1.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 1.3s'
+                                    } : {}}
+                                />
+
+                                <rect x="-2" y="-10" width="4" height="80" fill="#ef4444" />
+                                
+                                {(step === 1 || step === 2) && markLine.length > 0 && (
+                                    <line 
+                                        x1={drawnX} y1={0} 
+                                        x2={drawnX} y2={Math.min(60, Math.max(0, Math.max(...markLine) - 98))} 
+                                        stroke={type === 'wood' ? '#1c1917' : '#ef4444'} 
+                                        strokeWidth="5" strokeLinecap="round" 
+                                    />
+                                )}
+                            </g>
+
+                            {(step === 0 || step === 1) && (
+                                <g transform="translate(50, 98)">
+                                    <rect x="-10" y="0" width="10" height="60" fill="#cbd5e1" stroke="#475569" strokeWidth="2" rx="2" />
+                                    <g transform="translate(0, 10)">
+                                        <rect x="0" y="0" width={tapeX} height="40" fill="#fbbf24" stroke="#d97706" strokeWidth="2.5" />
+                                        <svg width={tapeX} height="40">{ticks}</svg>
+                                        <line x1="0" y1="20" x2={tapeX} y2="20" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                    </g>
+
+                                    <g transform={`translate(${tapeX}, 0)`}>
+                                        <rect x="0" y="-20" width="100" height="100" fill="#eab308" stroke="#ca8a04" strokeWidth="4" rx="20" />
+                                        <circle cx="50" cy="30" r="30" fill="#1c1917" />
+                                        <circle cx="50" cy="30" r="12" fill="#9ca3af" />
+                                        {step === 0 && (
+                                            <rect x="0" y="-20" width="100" height="100" fill="white" opacity="0" pointerEvents="all"
+                                                  className="cursor-ew-resize"
+                                                  onPointerDown={(e) => { e.preventDefault(); setIsDraggingTape(true); }} 
+                                            />
+                                        )}
+                                    </g>
+                                    
+                                    {isSnapped && (
+                                        <g transform={`translate(${tapeX + 50}, -30)`}>
+                                            <polygon points="-25,-5 -10,-10 0,-25 10,-10 25,-5 10,5 15,15 0,8 -15,15 -10,5" fill="#facc15" stroke="#78350f" strokeWidth="2" />
+                                            <text textAnchor="middle" y="2" fill="#78350f" fontSize="10" fontWeight="black">CLICK!</text>
+                                        </g>
+                                    )}
+                                </g>
+                            )}
+
+                            {step === 1 && (
+                                <rect 
+                                   x="0" y="0" width="100%" height="100%" 
+                                   fill="transparent"
+                                   className="cursor-none"
+                                   onPointerDown={handleMarkDown}
+                                   onPointerUp={handleMarkUp}
+                                />
+                            )}
+
+                            {step === 1 && isHoveringWorkspace && (
+                                <g transform={`translate(${cursor.x}, ${cursor.y}) rotate(-30)`} style={{ pointerEvents: 'none' }}>
+                                   <path d="M -5 -55 A 5 5 0 0 1 5 -55 Z" fill="#f472b6" />
+                                   <rect x="-5" y="-55" width="10" height="7" fill="#9ca3af" />
+                                   <line x1="-5" y1="-51" x2="5" y2="-51" stroke="#4b5563" strokeWidth="1" />
+                                   <rect x="-5" y="-48" width="10" height="38" fill="#eab308" />
+                                   <rect x="-2" y="-48" width="4" height="38" fill="#facc15" />
+                                   <polygon points="-5,-10 5,-10 0,0" fill="#ffedd5" />
+                                   <polygon points="-1.5,-3 1.5,-3 0,0" fill="#1f2937" />
+                                 </g>
+                            )}
+
+                            {step === 2 && (
+                                <g>
+                                    <g transform={`translate(${SAW_X}, ${SAW_Y}) scale(0.25, 1.2)`}>
+                                        <g className="animate-spin-fast" style={{ transformOrigin: '0px 0px' }}>
+                                             <circle r="45" fill="#9ca3af" stroke="#374151" strokeWidth="2" />
+                                             <circle r="43" fill="none" stroke="#4b5563" strokeWidth="3" strokeDasharray="8 4" />
+                                             <circle r="38" fill="none" stroke="#1f2937" strokeWidth="1" strokeDasharray="12 8" />
+                                             <circle r="12" fill="#4b5563" />
+                                        </g>
+                                    </g>
+                                    <rect x={SAW_X - 4} y={SAW_Y - 58} width="8" height="12" fill="#78716c" rx="2" />
+                                    <rect x={SAW_X - 4} y={SAW_Y + 46} width="8" height="12" fill="#78716c" rx="2" />
+                                </g>
+                            )}
+
+                            {step === 2 && sparks.map(s => (
+                                <circle key={s.id} cx={s.x} cy={s.y} r={s.size} fill={s.color} opacity={0.9} />
+                            ))}
+                         </svg>
+                     </div>
+
+                     <div className="mt-8 flex justify-center">
+                         {step === 0 && (
+                             <button 
+                                onClick={() => { setDrawnX(tapeX); setStep(1); }}
+                                className={`px-8 py-4 rounded-2xl font-black text-2xl transition-all duration-150 ${
+                                    isSnapped 
+                                    ? 'bg-green-500 text-white shadow-[0_8px_0_#15803d] scale-102 ring-4 ring-green-400/30' 
+                                    : 'bg-green-500 text-white shadow-[0_8px_0_#166534] hover:translate-y-1 hover:shadow-[0_4px_0_#166534] active:translate-y-2 active:shadow-none'
+                                }`}
+                             >
+                                LOCK LENGTH: {currentMeasurement}cm
+                             </button>
+                         )}
+                     </div>
+
+                  </div>
+               </div>
+            );
+        }
+
+        // --- BONUS ACTIVITY COMPONENT ---
+        function ReceiptActivity({ level, placedParts, isDecimalMode, getTargetLength, onBackToMenu }) {
+            const [calculatorInput, setCalculatorInput] = useState('');
+            const [feedback, setFeedback] = useState('');
+            const [isLocalShake, setIsLocalShake] = useState(false);
+            const [isSuccess, setIsSuccess] = useState(false);
+            const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+            
+            const canvasRef = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [notepadColor, setNotepadColor] = useState('#1e3a8a'); 
+            const lastPos = useRef({ x: 0, y: 0 });
+
+            // Create appropriate receipt list mapping
+            const itemsToBill = level.isFreeBuild
+               ? Object.values(placedParts).map(p => ({ type: p.type, label: `${p.length}cm ${MATERIAL_NAMES[p.type]}`, length: p.length }))
+               : level.targets.map(t => ({ type: t.type, label: t.label, length: getTargetLength(t) }));
+
+            const itemsList = itemsToBill.map((t, idx) => {
+                const len = t.length;
+                const rate = MATERIAL_UNIT_COSTS[t.type] || 1.00;
+                const cost = Math.round(len * rate * 100) / 100;
+                return {
+                    id: `item-${idx}`,
+                    name: level.isFreeBuild ? `${len}cm ${MATERIAL_NAMES[t.type]}` : t.label,
+                    type: MATERIAL_NAMES[t.type],
+                    len,
+                    rate,
+                    cost
+                };
+            });
+
+            const correctTotal = Math.round(itemsList.reduce((acc, item) => acc + item.cost, 0) * 100) / 100;
+
+            const handleSubmitValue = (e) => {
+                e.preventDefault();
+                const numericVal = parseFloat(calculatorInput);
+                if (Math.abs(numericVal - correctTotal) < 0.01) {
+                    setIsSuccess(true);
+                    setFeedback("CORRECT! You calculated the invoice perfectly!");
+                } else {
+                    setIsLocalShake(true);
+                    setFeedback("TRY AGAIN! Check your calculations!");
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    setTimeout(() => setIsLocalShake(false), 300);
+                }
+            };
+
+            const generatePDF = () => {
+                setIsGeneratingPDF(true);
+                const element = document.getElementById('pdf-export-container');
+                element.style.left = '0px'; 
+                element.style.top = '0px';
+                
+                const opt = {
+                    margin:       0.5,
+                    filename:     'Woodcraft_Worksheet.pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+                
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.style.left = '-9999px';
+                    element.style.top = '-9999px';
+                    setIsGeneratingPDF(false);
+                });
+            };
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = 3.5;
+            }, []);
+
+            const startDrawing = (e) => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const rect = canvas.getBoundingClientRect();
+                const coords = getEventCoords(e);
+                lastPos.current = {
+                    x: (coords.x - rect.left) * (canvas.width / rect.width),
+                    y: (coords.y - rect.top) * (canvas.height / rect.height)
+                };
+                setIsDrawing(true);
+            };
+
+            const drawMove = (e) => {
+                if (!isDrawing) return;
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const rect = canvas.getBoundingClientRect();
+                const coords = getEventCoords(e);
+                
+                const currX = (coords.x - rect.left) * (canvas.width / rect.width);
+                const currY = (coords.y - rect.top) * (canvas.height / rect.height);
+
+                ctx.strokeStyle = notepadColor;
+                ctx.beginPath();
+                ctx.moveTo(lastPos.current.x, lastPos.current.y);
+                ctx.lineTo(currX, currY);
+                ctx.stroke();
+
+                lastPos.current = { x: currX, y: currY };
+            };
+
+            const clearNotepad = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            };
+
+            return (
+              <div className={`flex flex-col h-screen bg-stone-900 font-sans selection:bg-transparent touch-none p-6 text-stone-800 transition-all ${isLocalShake ? 'shake-active' : ''} ${feedback && feedback.startsWith('TRY') ? 'bg-red-950/85' : ''}`}>
+                
+                <div className="flex justify-between items-center bg-amber-950 text-amber-50 p-4 rounded-3xl border-4 border-amber-900 mb-6 shadow-md shrink-0">
+                    <div>
+                        <h2 className="text-3xl font-black uppercase tracking-wider sketch-font">Receipt Math Desk</h2>
+                        <p className="text-amber-300 font-bold text-sm">Project: {level.title} {isDecimalMode ? '(Decimal Mode)' : '(Whole Numbers)'}</p>
+                    </div>
+                    <div className="flex gap-2">
+                        {level.isFreeBuild && (
+                            <button 
+                                onClick={generatePDF} 
+                                disabled={isGeneratingPDF}
+                                className={`flex items-center gap-1.5 text-white text-sm font-black px-4 py-2.5 rounded-2xl shadow-inner border transition-colors ${
+                                    isGeneratingPDF ? 'bg-stone-500 border-stone-600' : 'bg-blue-600 border-blue-800 hover:bg-blue-700'
+                                }`}
+                            >
+                               {isGeneratingPDF ? 'Generating...' : '🖨️ Download PDF'}
+                            </button>
+                        )}
+                        <button onClick={onBackToMenu} className="flex items-center gap-1.5 text-white text-sm font-black bg-amber-900 px-4 py-2.5 rounded-2xl shadow-inner border border-amber-800 hover:bg-amber-800 transition-colors">
+                           <Home size={16} /> Workshop
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 flex gap-6 min-h-0">
+                    <div className="w-5/12 bg-stone-50 rounded-2xl border-4 border-stone-300 p-5 shadow-2xl relative flex flex-col overflow-y-auto max-h-full">
+                        <div className="absolute top-0 inset-x-0 h-4 bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-stone-200 to-transparent z-10"></div>
+                        
+                        <div className="receipt-font text-xs flex flex-col flex-1 text-stone-900 mt-2">
+                            <div className="text-center font-bold text-base border-b-2 border-stone-400 pb-3 uppercase tracking-wider">
+                                Woodcraft Workshop<br />
+                                <span className="text-xs font-normal">Rangitata, Canterbury, NZ</span>
+                            </div>
+                            
+                            <div className="my-4 space-y-1 text-[11px] leading-tight font-bold border-b border-dashed border-stone-400 pb-3">
+                                <div>INVOICE: #{Date.now().toString().slice(-6)}</div>
+                                <div>PROJECT: {level.title.toUpperCase()}</div>
+                                <div>PRICING PLAN:</div>
+                                <div className="pl-2">WOOD   : $1.00 / 1.0 cm</div>
+                                <div className="pl-2">PIPE   : $2.00 / 1.0 cm</div>
+                                <div className="pl-2">CHAIN  : $1.50 / 1.0 cm</div>
+                                <div className="pl-2">PLASTIC: $2.50 / 1.0 cm</div>
+                            </div>
+
+                            <div className="flex-1 space-y-3.5 border-b-2 border-stone-400 pb-4">
+                                {itemsList.map((item) => (
+                                    <div key={item.id} className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold uppercase">{item.name}</div>
+                                            {!level.isFreeBuild && <div className="text-stone-500 text-[10px] italic">{item.type} ({item.len}cm)</div>}
+                                        </div>
+                                        <div className="text-right font-bold text-[13px] self-center">
+                                            {level.isFreeBuild 
+                                                ? `$${item.cost.toFixed(2)}`
+                                                : `${item.len} × $${item.rate.toFixed(2)} = `
+                                            }
+                                            {!level.isFreeBuild && <span className="font-black">${item.cost.toFixed(2)}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-4 pt-2 flex justify-between items-center text-lg font-black border-t border-stone-400">
+                                <span className="tracking-wide">TOTAL DUE:</span>
+                                <span className="text-amber-800 bg-amber-50 px-2 py-1 rounded border border-amber-900/10">???</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="w-7/12 flex flex-col min-h-0 bg-white border-4 border-green-800 rounded-3xl overflow-hidden shadow-2xl relative">
+                        <div className="bg-green-800 text-white p-3 px-5 flex justify-between items-center shrink-0">
+                            <span className="font-black uppercase tracking-wider sketch-font flex items-center gap-2">
+                                <Paintbrush size={18} /> Scratchpad (Draw working here!)
+                            </span>
+                            <div className="flex items-center gap-3">
+                                {['#1e3a8a', '#dc2626', '#16a34a', '#000'].map(color => (
+                                    <button 
+                                        key={color} 
+                                        onClick={() => setNotepadColor(color)}
+                                        className={`w-6 h-6 rounded-full border-2 transition-transform ${notepadColor === color ? 'scale-125 border-white shadow' : 'border-transparent'}`}
+                                        style={{ backgroundColor: color }}
+                                    />
+                                ))}
+                                <button onClick={clearNotepad} className="bg-green-900 px-3 py-1 rounded-xl text-xs font-black hover:bg-green-950 transition-colors uppercase">Clear</button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 relative min-h-0 grid-notepad">
+                            <canvas 
+                               ref={canvasRef}
+                               width={550}
+                               height={300}
+                               className="w-full h-full cursor-crosshair relative z-10"
+                               onMouseDown={startDrawing}
+                               onMouseMove={drawMove}
+                               onMouseUp={() => setIsDrawing(false)}
+                               onMouseLeave={() => setIsDrawing(false)}
+                               onTouchStart={startDrawing}
+                               onTouchMove={drawMove}
+                               onTouchEnd={() => setIsDrawing(false)}
+                            />
+                            <div className="absolute top-4 left-4 sketch-font text-stone-400 pointer-events-none text-sm select-none">
+                                Scribble addition working here! ✏️
+                            </div>
+                        </div>
+
+                        <div className="bg-stone-50 p-5 border-t-4 border-stone-200 shrink-0">
+                            <form onSubmit={handleSubmitValue} className="flex gap-4 items-end">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-black uppercase tracking-wider text-stone-500 mb-1.5">Enter Calculated Grand Total ($):</label>
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        value={calculatorInput}
+                                        onChange={(e) => setCalculatorInput(e.target.value)}
+                                        placeholder="0.00"
+                                        disabled={isSuccess}
+                                        className="w-full p-4 rounded-2xl bg-white border-3 border-stone-300 font-black text-2xl tracking-wide text-stone-800 placeholder-stone-300 focus:outline-none focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all text-center"
+                                    />
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={isSuccess}
+                                    className={`px-8 py-4.5 rounded-2xl font-black text-xl uppercase tracking-wider transition-all shadow-[0_6px_0_rgba(0,0,0,0.15)] ${
+                                        isSuccess 
+                                        ? 'bg-green-500 text-white shadow-none pointer-events-none' 
+                                        : 'bg-amber-500 hover:bg-amber-400 text-amber-950 active:translate-y-1 active:shadow-none'
+                                    }`}
+                                >
+                                    Verify Total 🧾
+                                </button>
+                            </form>
+
+                            {feedback && (
+                                <div className={`mt-4 p-3 rounded-xl text-center font-black uppercase tracking-wider text-sm animate-pop-in border-2 ${
+                                    feedback.startsWith('CORR') 
+                                    ? 'bg-green-100 text-green-800 border-green-300' 
+                                    : 'bg-red-100 text-red-800 border-red-300 animate-pulse'
+                                }`}>
+                                    {feedback}
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+
+                {isSuccess && (
+                  <div className="absolute inset-0 bg-stone-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 text-stone-800">
+                     <div className="bg-white p-10 rounded-[32px] shadow-2xl text-center border-8 border-green-500 transform scale-110 max-w-md animate-pop-in">
+                         <div className="text-6xl mb-4">🏆📝🎉</div>
+                         <h3 className="text-3xl font-black text-stone-900 mb-2 uppercase tracking-wide">Perfect Bill!</h3>
+                         <p className="text-stone-600 font-semibold mb-8">You Calculated the grand total of <strong className="text-green-600 font-black">${correctTotal.toFixed(2)}</strong> perfectly!</p>
+                         <button onClick={onBackToMenu} className="w-full bg-green-500 text-white py-4 rounded-2xl font-black text-lg shadow-[0_6px_0_#15803d] hover:translate-y-0.5 hover:shadow-[0_4px_0_#15803d] active:translate-y-1 active:shadow-none transition-all uppercase tracking-widest">
+                            Return to Workshop Desk
+                         </button>
+                     </div>
+                  </div>
+                )}
+
+                {/* HIDDEN PDF EXPORT CONTAINER FOR FREE BUILD MODE */}
+                <div id="pdf-export-container" className="fixed left-[-9999px] top-[-9999px] w-[800px] h-[1050px] bg-white p-8 font-sans text-stone-900 z-[-100]">
+                    <div className="text-center mb-6">
+                        <h1 className="text-4xl font-black uppercase border-b-4 border-stone-800 pb-2 inline-block">Woodcraft Worksheet</h1>
+                        <p className="text-lg font-bold text-stone-500 mt-2">Project: Free Build</p>
+                    </div>
+
+                    <div className="w-full h-[400px] bg-sky-100 border-4 border-stone-800 rounded-xl mb-8 relative overflow-hidden">
+                        <svg viewBox="0 0 800 700" className="w-full h-full absolute inset-0" preserveAspectRatio="xMidYMid meet">
+                            <defs>
+                              <pattern id="pdf-wood-texture" patternUnits="userSpaceOnUse" width="100" height="100"><rect width="100" height="100" fill="#f59e0b" /><path d="M0 10 Q 25 5 50 15 T 100 10 M0 30 Q 30 35 60 25 T 100 30 M0 50 Q 20 45 50 55 T 100 50 M0 70 Q 40 75 70 65 T 100 70 M0 90 Q 25 85 50 95 T 100 90" fill="none" stroke="#b45309" strokeWidth="1.5" opacity="0.6"/></pattern>
+                              <pattern id="pdf-chain-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
+                                <rect width="20" height="20" fill="#475569" />
+                                <rect x="3" y="5" width="14" height="10" rx="5" fill="none" stroke="#0f172a" strokeWidth="2.5"/>
+                                <rect x="4" y="6" width="12" height="8" rx="4" fill="none" stroke="#e2e8f0" strokeWidth="1"/>
+                                <circle cx="10" cy="10" r="3" fill="#1e293b" stroke="#94a3b8" strokeWidth="1" />
+                              </pattern>
+                              <linearGradient id="pdf-pipe-grad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#bae6fd" />
+                                <stop offset="25%" stopColor="#f8fafc" />
+                                <stop offset="50%" stopColor="#0284c7" />
+                                <stop offset="75%" stopColor="#0369a1" />
+                                <stop offset="100%" stopColor="#0c4a6e" />
+                              </linearGradient>
+                              <linearGradient id="pdf-plastic-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fca5a5" /><stop offset="50%" stopColor="#ef4444" /><stop offset="100%" stopColor="#b91c1c" /></linearGradient>
+                            </defs>
+                            
+                            {Object.values(placedParts).map(part => {
+                                const fillStyle = part.type === 'wood' ? 'url(#pdf-wood-texture)' :
+                                                  part.type === 'chain' ? 'url(#pdf-chain-pattern)' :
+                                                  part.type === 'pipe' ? 'url(#pdf-pipe-grad)' : 'url(#pdf-plastic-grad)';
+                                const strokeStyle = MATERIAL_STYLES[part.type].stroke;
+                                return (
+                                    <g key={part.id} transform={`translate(${part.cx}, ${part.cy - 100}) rotate(${part.rot || 0}) translate(${-part.w * CM_TO_PX / 2}, ${-part.h * CM_TO_PX / 2})`}>
+                                        <rect width={part.w * CM_TO_PX} height={part.h * CM_TO_PX} fill={fillStyle} stroke={strokeStyle} strokeWidth="3" rx="4" />
+                                    </g>
+                                )
+                            })}
+                        </svg>
+                    </div>
+
+                    <div className="flex gap-8 h-[400px]">
+                        <div className="w-1/2 border-4 border-stone-800 rounded-xl p-6 font-mono text-sm flex flex-col bg-stone-50 relative">
+                            <h2 className="text-2xl font-black mb-4 uppercase border-b-2 border-dashed border-stone-800 pb-2">Material Receipt</h2>
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                {itemsList.map((item) => (
+                                    <div key={item.id} className="flex justify-between mb-2 border-b border-stone-200 pb-1">
+                                        <span className="font-bold">{item.name}</span>
+                                        <span>${item.cost.toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-4 pt-4 border-t-4 border-stone-800 flex justify-between items-center text-xl font-black absolute bottom-6 inset-x-6">
+                                <span>TOTAL COST:</span>
+                                <span className="w-24 border-b-2 border-stone-800 h-6"></span>
+                            </div>
+                        </div>
+
+                        <div className="w-1/2 border-4 border-stone-800 rounded-xl p-6 flex flex-col">
+                            <h2 className="text-2xl font-black mb-4 uppercase border-b-2 border-dashed border-stone-800 pb-2 sketch-font">My Calculations</h2>
+                            <div className="flex-1 w-full border-2 border-stone-300 rounded-lg" style={{backgroundImage: 'linear-gradient(transparent 95%, #e5e7eb 95%)', backgroundSize: '100% 30px'}}>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+              </div>
+            );
+        }
+
+        // --- Render Safety Bootstrapping ---
+        const initApp = () => {
+          const container = document.getElementById('root');
+          if (container) {
+            const root = ReactDOM.createRoot(container);
+            root.render(<App />);
+          }
+        };
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          initApp();
+        } else {
+          document.addEventListener('DOMContentLoaded', initApp);
+        }
+    </script>
+</body>
+</html>

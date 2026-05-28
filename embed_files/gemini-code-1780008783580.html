@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Fractions for Kids!</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            background-color: #fffae6;
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #ff5722;
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+
+        #game-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border: 5px solid #ffcc00;
+        }
+
+        #instruction-box {
+            font-size: 1.4rem;
+            min-height: 70px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #4a4a4a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+        }
+
+        /* Pizza Graphic Structure */
+        #pizza-wrapper {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 30px auto;
+        }
+
+        #pizza {
+            width: 100%;
+            height: 100%;
+            background-color: #de7e33; /* Crust */
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 8px 0 #b85f1d;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        #cheese {
+            width: 88%;
+            height: 88%;
+            background-color: #ffdf6d; /* Cheese */
+            border-radius: 50%;
+            position: absolute;
+            top: 6%;
+            left: 6%;
+        }
+
+        /* Slice Lines */
+        .line {
+            position: absolute;
+            background-color: #b85f1d;
+            display: none;
+        }
+
+        #vertical-line {
+            width: 6px;
+            height: 100%;
+            left: calc(50% - 3px);
+            top: 0;
+        }
+
+        #horizontal-line {
+            height: 6px;
+            width: 100%;
+            top: calc(50% - 3px);
+            left: 0;
+        }
+
+        /* Interactive Topping Halves */
+        .half-zone {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            top: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        #left-half { left: 0; }
+        #right-half { right: 0; }
+
+        /* Pepperoni styling */
+        .pepperoni-cluster {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .pepperoni-cluster.active {
+            opacity: 1;
+        }
+
+        .pep {
+            width: 30px;
+            height: 30px;
+            background-color: #d32f2f;
+            border-radius: 50%;
+            position: absolute;
+            border: 2px solid #b71c1c;
+        }
+
+        /* UI Control Buttons */
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            min-height: 60px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-family: inherit;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #388e3c;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #388e3c;
+        }
+
+        button.blue-btn {
+            background-color: #2196f3;
+            box-shadow: 0 5px 0 #1976d2;
+        }
+
+        #feedback {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 20px;
+            height: 40px;
+        }
+
+        .success-text { color: #4caf50; }
+        .error-text { color: #f44336; }
+    </style>
+</head>
+<body>
+
+    <h1>🍕 Pizza Math! 🍕</h1>
+    
+    <div id="game-container">
+        <div id="instruction-box">Loading game...</div>
+
+        <div id="pizza-wrapper">
+            <div id="pizza">
+                <div id="cheese"></div>
+                
+                <div id="vertical-line" class="line"></div>
+                <div id="horizontal-line" class="line"></div>
+
+                <div id="left-half" class="half-zone" onclick="toggleHalf('left')">
+                    <div id="pep-left" class="pepperoni-cluster">
+                        <div class="pep" style="top: 30px; left: 40px;"></div>
+                        <div class="pep" style="top: 100px; left: 20px;"></div>
+                        <div class="pep" style="top: 170px; left: 40px;"></div>
+                    </div>
+                </div>
+
+                <div id="right-half" class="half-zone" onclick="toggleHalf('right')">
+                    <div id="pep-right" class="pepperoni-cluster">
+                        <div class="pep" style="top: 30px; right: 40px;"></div>
+                        <div class="pep" style="top: 100px; right: 20px;"></div>
+                        <div class="pep" style="top: 170px; right: 40px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container" id="button-area">
+            </div>
+
+        <div id="feedback"></div>
+    </div>
+
+    <script>
+        // Game State Engine
+        let currentLevel = 1;
+        let leftPepActive = false;
+        let rightPepActive = false;
+
+        const instructionBox = document.getElementById('instruction-box');
+        const buttonArea = document.getElementById('button-area');
+        const feedback = document.getElementById('feedback');
+        const vLine = document.getElementById('vertical-line');
+        const hLine = document.getElementById('horizontal-line');
+        const leftHalfZone = document.getElementById('left-half');
+        const rightHalfZone = document.getElementById('right-half');
+        const pepLeft = document.getElementById('pep-left');
+        const pepRight = document.getElementById('pep-right');
+
+        // Text-to-Speech Assist Function for 6-year-olds
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.9; // Slightly slower for children
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function loadLevel() {
+            feedback.innerHTML = "";
+            buttonArea.innerHTML = "";
+            
+            // Reset layout properties
+            vLine.style.display = "none";
+            hLine.style.display = "none";
+            leftHalfZone.style.display = "none";
+            rightHalfZone.style.display = "none";
+            pepLeft.classList.remove('active');
+            pepRight.classList.remove('active');
+            leftPepActive = false;
+            rightPepActive = false;
+
+            if (currentLevel === 1) {
+                const text = "Can you slice the pizza into HALVES (2 equal pieces) for two friends?";
+                instructionBox.innerText = text;
+                speak(text);
+
+                buttonArea.innerHTML = `
+                    <button class="blue-btn" onclick="checkLevel1(2)">Cut into 2 pieces</button>
+                    <button class="blue-btn" onclick="checkLevel1(4)">Cut into 4 pieces</button>
+                `;
+            } 
+            else if (currentLevel === 2) {
+                const text = "Great job! Now, slice the pizza into FOURTHS (4 equal pieces) for four friends!";
+                instructionBox.innerText = text;
+                speak(text);
+                vLine.style.display = "block"; // Start with 2 slices showing from last level
+
+                buttonArea.innerHTML = `
+                    <button class="blue-btn" onclick="checkLevel2(2)">Cut into 2 pieces</button>
+                    <button class="blue-btn" onclick="checkLevel2(4)">Cut into 4 pieces</button>
+                `;
+            } 
+            else if (currentLevel === 3) {
+                const text = "Awesome! Let's put pepperoni on exactly HALF (1/2) of this pizza. Tap a side!";
+                instructionBox.innerText = text;
+                speak(text);
+                
+                vLine.style.display = "block"; 
+                leftHalfZone.style.display = "flex";
+                rightHalfZone.style.display = "flex";
+
+                buttonArea.innerHTML = `
+                    <button onclick="checkLevel3()">Check my Pizza!</button>
+                `;
+            }
+        }
+
+        function checkLevel1(slices) {
+            if (slices === 2) {
+                vLine.style.display = "block";
+                feedback.innerHTML = "<span class='success-text'>🎉 Perfect! That's 2 equal halves! 🎉</span>";
+                speak("Perfect! That's two equal halves!");
+                setTimeout(() => { currentLevel = 2; loadLevel(); }, 3000);
+            } else {
+                feedback.innerHTML = "<span class='error-text'>Oops! That makes 4 pieces. Let's try 2 pieces!</span>";
+                speak("Oops! That makes four pieces. Let's try two pieces!");
+            }
+        }
+
+        function checkLevel2(slices) {
+            if (slices === 4) {
+                vLine.style.display = "block";
+                hLine.style.display = "block";
+                feedback.innerHTML = "<span class='success-text'>🎉 Terrific! 4 equal quarters! 🎉</span>";
+                speak("Terrific! Four equal quarters!");
+                setTimeout(() => { currentLevel = 3; loadLevel(); }, 3000);
+            } else {
+                feedback.innerHTML = "<span class='error-text'>Oops! We need 4 pieces for 4 friends! Try again!</span>";
+                speak("Oops! We need four pieces for four friends! Try again!");
+            }
+        }
+
+        function toggleHalf(side) {
+            if (side === 'left') {
+                leftPepActive = !leftPepActive;
+                if (leftPepActive) pepLeft.classList.add('active');
+                else pepLeft.classList.remove('active');
+            } else {
+                rightPepActive = !rightPepActive;
+                if (rightPepActive) pepRight.classList.add('active');
+                else pepRight.classList.remove('active');
+            }
+        }
+
+        function checkLevel3() {
+            // One side exactly must be chosen to equal exactly 1/2
+            if ((leftPepActive && !rightPepActive) || (!leftPepActive && rightPepActive)) {
+                feedback.innerHTML = "<span class='success-text'>🍕 You did it! You are a Pizza Fraction Chef! 🍕</span>";
+                speak("You did it! You are a Pizza Fraction Chef!");
+                buttonArea.innerHTML = `<button onclick="currentLevel=1; loadLevel();">Play Again!</button>`;
+            } else if (leftPepActive && rightPepActive) {
+                feedback.innerHTML = "<span class='error-text'>That's the WHOLE pizza! We only want HALF (1/2).</span>";
+                speak("That is the whole pizza! We only want half.");
+            } else {
+                feedback.innerHTML = "<span class='error-text'>Tap a side to add pepperoni to 1/2 of the pizza!</span>";
+                speak("Tap a side to add pepperoni to half of the pizza!");
+            }
+        }
+
+        // Start the game loop automatically on page open
+        window.onload = loadLevel;
+    </script>
+</body>
+</html>

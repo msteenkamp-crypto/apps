@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌟 Mr/Ms Teacher's Fun Apps! 🌟</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== CSS VARIABLES ===== */
+    :root {
+      --sky:        #38bdf8;
+      --sun:        #fbbf24;
+      --grass:      #4ade80;
+      --pink:       #f472b6;
+      --purple:     #a78bfa;
+      --coral:      #fb923c;
+      --white:      #ffffff;
+      --card-bg:    rgba(255,255,255,0.92);
+      --shadow:     0 8px 32px rgba(0,0,0,0.18);
+      --card-radius:28px;
+    }
+
+    /* ===== RESET / BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: linear-gradient(160deg, #a8edea 0%, #fed6e3 50%, #ffecd2 100%);
+      position: relative;
+    }
+
+    /* ===== ANIMATED BACKGROUND SHAPES ===== */
+    .bg-blobs {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.35;
+      animation: floatBlob 8s ease-in-out infinite alternate;
+    }
+    .blob-1 { width:320px; height:320px; background:#fbbf24; top:-80px; left:-80px; animation-delay:0s; }
+    .blob-2 { width:260px; height:260px; background:#f472b6; top:30%; right:-60px; animation-delay:1.5s; }
+    .blob-3 { width:200px; height:200px; background:#818cf8; bottom:10%; left:5%; animation-delay:3s; }
+    .blob-4 { width:180px; height:180px; background:#4ade80; bottom:-40px; right:20%; animation-delay:2s; }
+    .blob-5 { width:140px; height:140px; background:#38bdf8; top:55%; left:40%; animation-delay:4s; }
+    @keyframes floatBlob {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(20px, 30px) scale(1.08); }
+    }
+
+    /* ===== FLOATING STARS ===== */
+    .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .star {
+      position: absolute;
+      font-size: 1.5rem;
+      animation: twinkle 3s ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      from { opacity: 0.2; transform: scale(0.8) rotate(-10deg); }
+      to   { opacity: 0.9; transform: scale(1.2) rotate(10deg); }
+    }
+
+    /* ===== LAYOUT ===== */
+    .page {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 16px 60px;
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: popIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.6) translateY(-30px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .header-emoji {
+      font-size: 5rem;
+      display: block;
+      animation: bounce 2s ease-in-out infinite;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-14px); }
+    }
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(2.2rem, 6vw, 4rem);
+      background: linear-gradient(135deg, #f472b6, #a78bfa, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      line-height: 1.1;
+      margin-top: 8px;
+    }
+    .subtitle {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #6d4c8f;
+      margin-top: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ===== LOADING STATE ===== */
+    #loading {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px; margin-top: 60px;
+      animation: fadeIn 0.4s ease;
+    }
+    .spinner {
+      width: 64px; height: 64px;
+      border: 6px solid rgba(167,139,250,0.2);
+      border-top-color: #a78bfa;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.4rem; color: #7c3aed;
+    }
+
+    /* ===== ERROR / EMPTY STATES ===== */
+    #error-msg, #empty-msg {
+      display: none;
+      background: var(--card-bg);
+      border-radius: var(--card-radius);
+      padding: 32px 40px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      max-width: 480px;
+      margin-top: 40px;
+      animation: popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    #error-msg h2, #empty-msg h2 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.8rem; color: #e11d48; margin-bottom: 10px;
+    }
+    #empty-msg h2 { color: #7c3aed; }
+    #error-msg p, #empty-msg p { color: #555; font-size: 1rem; line-height: 1.5; }
+    #error-msg code {
+      display: inline-block; margin-top: 10px;
+      background: #fef9c3; border-radius: 8px;
+      padding: 4px 10px; font-size: 0.85rem; color: #92400e;
+    }
+
+    /* ===== CAROUSEL WRAPPER ===== */
+    #carousel-section {
+      display: none;
+      width: 100%;
+      max-width: 900px;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .app-count {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.1rem; color: #7c3aed;
+      margin-bottom: 16px;
+      background: rgba(255,255,255,0.7);
+      padding: 6px 20px; border-radius: 100px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ===== CAROUSEL TRACK ===== */
+    .carousel-outer {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    /* Arrow buttons */
+    .arrow-btn {
+      flex-shrink: 0;
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: 1.8rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+      background: linear-gradient(135deg, #f472b6, #a78bfa);
+      color: white;
+      user-select: none;
+      position: relative; z-index: 2;
+    }
+    .arrow-btn:hover  { transform: scale(1.12); box-shadow: 0 8px 28px rgba(0,0,0,0.24); }
+    .arrow-btn:active { transform: scale(0.96); }
+    .arrow-btn:disabled {
+      background: #d1d5db; cursor: default;
+      transform: none; box-shadow: none;
+      opacity: 0.5;
+    }
+
+    /* Cards viewport */
+    .carousel-viewport {
+      flex: 1;
+      overflow: hidden;
+      border-radius: var(--card-radius);
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 0.45s cubic-bezier(0.34,1.12,0.64,1);
+      will-change: transform;
+    }
+
+    /* ===== APP CARD ===== */
+    .app-card {
+      flex: 0 0 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--card-bg);
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+
+    /* Colorful top strip */
+    .card-header {
+      width: 100%;
+      padding: 20px 28px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .card-emoji { font-size: 2.2rem; flex-shrink: 0; }
+    .card-title {
+      font-family: 'Fredoka One', cursive;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      color: #1e1b4b;
+      line-height: 1.1;
+    }
+    .card-filename {
+      font-size: 0.8rem; color: #9ca3af;
+      margin-top: 2px;
+      font-family: monospace;
+    }
+
+    /* Screenshot area */
+    .card-preview {
+      width: 100%;
+      background: #f0f4ff;
+      position: relative;
+      overflow: hidden;
+      height: 340px;
+      border-top: 3px solid rgba(167,139,250,0.3);
+      border-bottom: 3px solid rgba(167,139,250,0.3);
+    }
+    .card-preview iframe {
+      width: 100%; height: 100%;
+      border: none;
+      pointer-events: none;
+      transform-origin: top left;
+    }
+    .preview-overlay {
+      position: absolute; inset: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    /* Loading shimmer for preview */
+    .preview-shimmer {
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, #f0f4ff 25%, #e0e8ff 50%, #f0f4ff 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+
+    /* Card footer / launch button */
+    .card-footer {
+      width: 100%;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .launch-btn {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.3rem;
+      padding: 14px 40px;
+      border: none;
+      border-radius: 100px;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, #f472b6 0%, #a78bfa 60%, #38bdf8 100%);
+      background-size: 200% 200%;
+      box-shadow: 0 6px 24px rgba(167,139,250,0.45);
+      transition: transform 0.18s, box-shadow 0.18s, background-position 0.4s;
+      animation: gradMove 4s ease infinite alternate;
+      text-decoration: none;
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    @keyframes gradMove {
+      from { background-position: 0% 50%; }
+      to   { background-position: 100% 50%; }
+    }
+    .launch-btn:hover  { transform: scale(1.07) translateY(-2px); box-shadow: 0 12px 36px rgba(167,139,250,0.55); }
+    .launch-btn:active { transform: scale(0.97); }
+
+    /* ===== DOTS INDICATOR ===== */
+    .dots {
+      display: flex; gap: 10px;
+      margin-top: 24px;
+    }
+    .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: rgba(167,139,250,0.3);
+      border: 2px solid rgba(167,139,250,0.4);
+      cursor: pointer;
+      transition: background 0.25s, transform 0.25s;
+    }
+    .dot.active {
+      background: #a78bfa;
+      transform: scale(1.35);
+      border-color: #7c3aed;
+    }
+
+    /* ===== SETUP NOTICE ===== */
+    .setup-notice {
+      margin-top: 48px;
+      background: rgba(255,255,255,0.75);
+      border-radius: 20px;
+      padding: 20px 28px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      border-left: 6px solid #a78bfa;
+    }
+    .setup-notice h3 {
+      font-family: 'Fredoka One', cursive;
+      color: #7c3aed; font-size: 1.1rem; margin-bottom: 6px;
+    }
+    .setup-notice p, .setup-notice li {
+      font-size: 0.88rem; color: #4b5563; line-height: 1.6;
+    }
+    .setup-notice code {
+      background: #ede9fe; border-radius: 5px;
+      padding: 1px 6px; font-size: 0.82rem; color: #6d28d9;
+    }
+    .setup-notice ul { padding-left: 20px; margin-top: 6px; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .arrow-btn { width: 48px; height: 48px; font-size: 1.4rem; }
+      .card-preview { height: 220px; }
+      .card-header { padding: 16px 18px 12px; }
+      .card-footer { padding: 16px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Animated background -->
+<div class="bg-blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+  <div class="blob blob-5"></div>
+</div>
+<div class="stars" id="stars"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <span class="header-emoji">🚀</span>
+    <h1>Fun Learning Apps!</h1>
+    <p class="subtitle">✨ Pick an app and start exploring! ✨</p>
+  </header>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Loading your apps… 🎉</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="error-msg">
+    <h2>🙈 Oops!</h2>
+    <p>Couldn't load the apps. Make sure you've set your GitHub username and repo name at the top of this page's script section.</p>
+    <code id="error-detail"></code>
+  </div>
+
+  <!-- Empty state -->
+  <div id="empty-msg">
+    <h2>📂 No Apps Yet!</h2>
+    <p>Add some <strong>.html</strong> files to your <code>embed_files/</code> folder on GitHub and they'll appear here automatically!</p>
+  </div>
+
+  <!-- Carousel -->
+  <section id="carousel-section" role="region" aria-label="App carousel">
+    <div class="app-count" id="app-count">Loading…</div>
+
+    <div class="carousel-outer">
+      <button class="arrow-btn" id="prev-btn" aria-label="Previous app" disabled>‹</button>
+
+      <div class="carousel-viewport">
+        <div class="carousel-track" id="carousel-track"></div>
+      </div>
+
+      <button class="arrow-btn" id="next-btn" aria-label="Next app">›</button>
+    </div>
+
+    <div class="dots" id="dots" role="tablist"></div>
+  </section>
+
+  <!-- Setup notice (always visible for teacher) -->
+  <div class="setup-notice">
+    <h3>👩‍🏫 Teacher Setup Instructions</h3>
+    <p>Edit <code>index.html</code> and update these two lines near the bottom:</p>
+    <ul>
+      <li><code>GITHUB_USERNAME</code> → your GitHub username</li>
+      <li><code>GITHUB_REPO</code> → your repository name</li>
+    </ul>
+    <p style="margin-top:8px;">Drop any <code>.html</code> files into the <code>embed_files/</code> folder — they'll appear automatically! 🎉</p>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+  // =====================================================
+  //  ⬇️  TEACHER: EDIT THESE TWO LINES ONLY  ⬇️
+  // =====================================================
+  const GITHUB_USERNAME = 'aitips4teacherz-stack';  // your GitHub username
+  const GITHUB_REPO     = 'ClarksApps';             // your repo name
+  // =====================================================
+
+  const EMBED_FOLDER = 'embed_files';
+
+  // Fun emojis rotated across cards
+  const CARD_EMOJIS = ['🎮','🧩','🔢','🔬','🌍','🎨','📚','🦄','🚀','⭐','🎵','🦋','🐉','🏆','🍎','🧠'];
+
+  // Pretty-print a filename → title
+  function fileToTitle(filename) {
+    return filename
+      .replace(/\.html?$/i, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  // Sprinkle background stars
+  function spawnStars() {
+    const container = document.getElementById('stars');
+    const items = ['⭐','✨','🌟','💫','🌈','❤️','💜','💙'];
+    for (let i = 0; i < 22; i++) {
+      const s = document.createElement('span');
+      s.className = 'star';
+      s.textContent = items[Math.floor(Math.random() * items.length)];
+      s.style.left   = Math.random() * 100 + 'vw';
+      s.style.top    = Math.random() * 100 + 'vh';
+      s.style.fontSize = (Math.random() * 1.2 + 0.8) + 'rem';
+      s.style.animationDuration = (Math.random() * 3 + 2) + 's';
+      s.style.animationDelay    = (Math.random() * 4) + 's';
+      container.appendChild(s);
+    }
+  }
+  spawnStars();
+
+  // ===== CAROUSEL STATE =====
+  let currentIndex = 0;
+  let totalCards = 0;
+
+  const track    = document.getElementById('carousel-track');
+  const dotsEl   = document.getElementById('dots');
+  const prevBtn  = document.getElementById('prev-btn');
+  const nextBtn  = document.getElementById('next-btn');
+  const countEl  = document.getElementById('app-count');
+
+  function goTo(index) {
+    currentIndex = Math.max(0, Math.min(index, totalCards - 1));
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    // Update dots
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === currentIndex);
+      d.setAttribute('aria-selected', i === currentIndex);
+    });
+    // Arrow states
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === totalCards - 1;
+    // Count label
+    countEl.textContent = `App ${currentIndex + 1} of ${totalCards} 🎉`;
+  }
+
+  prevBtn.addEventListener('click', () => goTo(currentIndex - 1));
+  nextBtn.addEventListener('click', () => goTo(currentIndex + 1));
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  goTo(currentIndex - 1);
+    if (e.key === 'ArrowRight') goTo(currentIndex + 1);
+  });
+
+  // Touch / swipe
+  let touchStartX = 0;
+  track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    const dx = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(dx) > 40) dx > 0 ? goTo(currentIndex + 1) : goTo(currentIndex - 1);
+  });
+
+  // ===== BUILD CARD =====
+  function buildCard(file, index) {
+    const title    = fileToTitle(file.name);
+    const emoji    = CARD_EMOJIS[index % CARD_EMOJIS.length];
+    const fileUrl  = `embed_files/${file.name}`;
+    const rawUrl   = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/main/${EMBED_FOLDER}/${file.name}`;
+    const liveUrl  = `https://${GITHUB_USERNAME}.github.io/${GITHUB_REPO}/${EMBED_FOLDER}/${file.name}`;
+
+    // Gradient per card
+    const gradients = [
+      'linear-gradient(135deg,#f472b6,#a78bfa)',
+      'linear-gradient(135deg,#38bdf8,#4ade80)',
+      'linear-gradient(135deg,#fbbf24,#fb923c)',
+      'linear-gradient(135deg,#a78bfa,#38bdf8)',
+      'linear-gradient(135deg,#4ade80,#fbbf24)',
+    ];
+    const grad = gradients[index % gradients.length];
+
+    const card = document.createElement('div');
+    card.className = 'app-card';
+    card.innerHTML = `
+      <div class="card-header" style="background:${grad};">
+        <span class="card-emoji">${emoji}</span>
+        <div>
+          <div class="card-title">${title}</div>
+          <div class="card-filename">${file.name}</div>
+        </div>
+      </div>
+      <div class="card-preview" id="preview-${index}">
+        <div class="preview-shimmer" id="shimmer-${index}"></div>
+        <iframe
+          id="iframe-${index}"
+          src="${liveUrl}"
+          title="${title} preview"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-forms"
+          onload="document.getElementById('shimmer-${index}').style.display='none'"
+        ></iframe>
+        <div class="preview-overlay" onclick="window.open('${liveUrl}','_blank')" title="Open ${title}"></div>
+      </div>
+      <div class="card-footer">
+        <a class="launch-btn" href="${liveUrl}" target="_blank" rel="noopener">
+          🚀 Play ${title}!
+        </a>
+      </div>
+    `;
+    return card;
+  }
+
+  // ===== FETCH FILES FROM GITHUB API =====
+  async function loadApps() {
+    const loadingEl = document.getElementById('loading');
+    const errorEl   = document.getElementById('error-msg');
+    const emptyEl   = document.getElementById('empty-msg');
+    const sectionEl = document.getElementById('carousel-section');
+
+    // If username/repo not set, show friendly error
+    if (GITHUB_USERNAME === 'YOUR_USERNAME' || GITHUB_REPO === 'YOUR_REPO_NAME') {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      document.getElementById('error-detail').textContent =
+        'Set GITHUB_USERNAME and GITHUB_REPO in the script at the bottom of index.html';
+      return;
+    }
+
+    const apiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${EMBED_FOLDER}`;
+
+    try {
+      const res = await fetch(apiUrl, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' }
+      });
+
+      if (!res.ok) {
+        throw new Error(`GitHub API ${res.status}: ${res.statusText}`);
+      }
+
+      const files = await res.json();
+      const htmlFiles = files.filter(f => f.type === 'file' && /\.html?$/i.test(f.name));
+
+      loadingEl.style.display = 'none';
+
+      if (htmlFiles.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      // Build cards
+      htmlFiles.forEach((file, i) => {
+        const card = buildCard(file, i);
+        track.appendChild(card);
+
+        // Dot
+        const dot = document.createElement('button');
+        dot.className = 'dot' + (i === 0 ? ' active' : '');
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-label', `App ${i + 1}: ${fileToTitle(file.name)}`);
+        dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+        dot.addEventListener('click', () => goTo(i));
+        dotsEl.appendChild(dot);
+      });
+
+      totalCards = htmlFiles.length;
+      sectionEl.style.display = 'flex';
+      goTo(0);
+
+    } catch (err) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      document.getElementById('error-detail').textContent = err.message;
+      console.error('Failed to load apps:', err);
+    }
+  }
+
+  loadApps();
+</script>
+</body>
+</html>
